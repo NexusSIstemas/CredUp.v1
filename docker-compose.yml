@@ -1,0 +1,45 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: credup
+      POSTGRES_USER: credup
+      POSTGRES_PASSWORD: credup
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U credup -d credup"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/credup
+      DATABASE_USER: credup
+      DATABASE_PASSWORD: credup
+      JWT_SECRET: ${JWT_SECRET:-local-development-secret-change-before-production-123}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@credup.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-me-now}
+      CORS_ALLOWED_ORIGIN: http://localhost:5173
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:8080/api
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

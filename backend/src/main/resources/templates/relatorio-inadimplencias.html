@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <title>Relatório de inadimplências</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 18mm 14mm 16mm;
+            @bottom-right {
+                content: "Página " counter(page) " de " counter(pages);
+                color: #6d7b73;
+                font-size: 9px;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            color: #17231d;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 11px;
+        }
+
+        .cabecalho {
+            width: 100%;
+            margin-bottom: 18px;
+            border-bottom: 3px solid #176b47;
+        }
+
+        .cabecalho td {
+            padding: 0 0 12px;
+            border: 0;
+        }
+
+        .marca {
+            color: #155d3e;
+            font-size: 25px;
+            font-weight: bold;
+        }
+
+        .marca span {
+            display: inline-block;
+            margin-right: 7px;
+            padding: 5px 9px;
+            border-radius: 7px;
+            color: #ffffff;
+            background: #176b47;
+        }
+
+        .geracao {
+            color: #617068;
+            text-align: right;
+            line-height: 1.5;
+        }
+
+        h1 {
+            margin: 0 0 5px;
+            font-size: 23px;
+        }
+
+        .subtitulo {
+            margin: 0 0 16px;
+            color: #6d7b73;
+        }
+
+        .filtros,
+        .resumo {
+            width: 100%;
+            margin-bottom: 15px;
+            border-collapse: separate;
+            border-spacing: 7px 0;
+        }
+
+        .filtros td,
+        .resumo td {
+            padding: 10px 12px;
+            border: 1px solid #dfe8e2;
+            border-radius: 7px;
+            background: #f6faf7;
+        }
+
+        .rotulo {
+            display: block;
+            margin-bottom: 4px;
+            color: #718078;
+            font-size: 9px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .valor-resumo {
+            color: #155d3e;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .dados {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .dados th {
+            padding: 9px 8px;
+            color: #ffffff;
+            background: #176b47;
+            font-size: 9px;
+            text-align: left;
+            text-transform: uppercase;
+        }
+
+        .dados td {
+            padding: 9px 8px;
+            border-bottom: 1px solid #e4e9e6;
+        }
+
+        .dados tr:nth-child(even) td {
+            background: #f7faf8;
+        }
+
+        .direita {
+            text-align: right;
+        }
+
+        .vazio {
+            padding: 35px !important;
+            color: #75827b;
+            text-align: center;
+        }
+
+        .rodape {
+            margin-top: 16px;
+            padding-top: 10px;
+            border-top: 1px solid #dfe5e1;
+            color: #7a8780;
+            font-size: 9px;
+        }
+    </style>
+</head>
+<body>
+<table class="cabecalho">
+    <tr>
+        <td><div class="marca"><span>C</span>CredUp</div></td>
+        <td class="geracao">
+            <div th:text="'Gerado em ' + ${geradoEm}">Gerado em</div>
+            <div th:text="'Responsável: ' + ${geradoPor}">Responsável</div>
+        </td>
+    </tr>
+</table>
+
+<h1>Relatório de inadimplências</h1>
+<p class="subtitulo">Registros da rede CREDUP conforme os filtros selecionados.</p>
+
+<table class="filtros">
+    <tr>
+        <td><span class="rotulo">Período</span><strong th:text="${periodo}">Todo o período</strong></td>
+        <td><span class="rotulo">Comércio</span><strong th:text="${comercioFiltro}">Todos</strong></td>
+        <td><span class="rotulo">Situação</span><strong th:text="${statusFiltro}">Todos</strong></td>
+    </tr>
+</table>
+
+<table class="resumo">
+    <tr>
+        <td><span class="rotulo">Registros encontrados</span><span class="valor-resumo" th:text="${quantidade}">0</span></td>
+        <td><span class="rotulo">Valor total</span><span class="valor-resumo"
+                th:text="${#numbers.formatCurrency(total)}">R$ 0,00</span></td>
+    </tr>
+</table>
+
+<table class="dados">
+    <thead>
+    <tr>
+        <th>Cliente</th>
+        <th>CPF protegido</th>
+        <th>Comércio</th>
+        <th>Data da dívida</th>
+        <th class="direita">Valor</th>
+        <th>Situação</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="linha : ${linhas}">
+        <td th:text="${linha.cliente}">Cliente</td>
+        <td th:text="${linha.cpf}">000.***.***-00</td>
+        <td th:text="${linha.comercio}">Comércio</td>
+        <td th:text="${linha.data}">01/01/2026</td>
+        <td class="direita" th:text="${#numbers.formatCurrency(linha.valor)}">R$ 0,00</td>
+        <td th:text="${linha.status}">Pendente</td>
+    </tr>
+    <tr th:if="${#lists.isEmpty(linhas)}">
+        <td class="vazio" colspan="6">Nenhum registro encontrado para os filtros selecionados.</td>
+    </tr>
+    </tbody>
+</table>
+
+<div class="rodape">
+    Documento gerado pelo CREDUP. CPF protegido conforme as regras de privacidade do sistema.
+</div>
+</body>
+</html>
