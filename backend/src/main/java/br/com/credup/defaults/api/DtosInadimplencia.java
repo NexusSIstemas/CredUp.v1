@@ -16,6 +16,7 @@ public final class DtosInadimplencia {
     public record SolicitacaoCliente(
             @NotBlank String nome,
             @NotBlank String sobrenome,
+            @Size(max = 120) String apelido,
             @NotBlank
             @CPF(message = "CPF inválido")
             String cpf,
@@ -41,6 +42,7 @@ public final class DtosInadimplencia {
             UUID id,
             String nome,
             String sobrenome,
+            String apelido,
             String cpfMascarado) {
     }
 
@@ -48,6 +50,7 @@ public final class DtosInadimplencia {
             UUID id,
             String nome,
             String sobrenome,
+            String apelido,
             String cpfMascarado,
             String telefoneMascarado,
             String residencia,
@@ -70,9 +73,10 @@ public final class DtosInadimplencia {
     }
 
     public record SolicitacaoBuscaRede(
-            @Pattern(
-                    regexp = "^$|\\d{3,11}",
-                    message = "Insira pelo menos os 3 primeiros dígitos do CPF")
-            String cpf) {
+            @Size(
+                    min = 3,
+                    max = 120,
+                    message = "Insira pelo menos 3 dígitos do CPF ou 3 caracteres do apelido")
+            String busca) {
     }
 }

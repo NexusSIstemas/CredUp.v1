@@ -44,7 +44,9 @@ public class ServicoInadimplencia {
         if (request.dataDivida().isBefore(LocalDate.of(2000, 1, 1)))
             throw new ExcecaoApi(HttpStatus.UNPROCESSABLE_ENTITY,
                     "A data da dívida deve ser a partir de 01/01/2000");
-        var client = clients.findByCpf(request.cliente().cpf()).orElseGet(() -> createClient(request.cliente()));
+        var client = clients.findByCpf(request.cliente().cpf())
+                .map(existing -> addNicknameWhenMissing(existing, request.cliente().apelido()))
+                .orElseGet(() -> createClient(request.cliente()));
         var debt = new Divida();
         debt.setClient(client);
         debt.setComercio(commerce);
@@ -64,6 +66,7 @@ public class ServicoInadimplencia {
         var client = new ClienteInadimplente();
         client.setName(request.nome());
         client.setSurname(request.sobrenome());
+        client.setNickname(normalizeNickname(request.apelido()));
         client.setCpf(request.cpf());
         client.setTelephone(request.telefone());
         client.setResidence(request.residencia());
@@ -75,14 +78,42 @@ public class ServicoInadimplencia {
         }
     }
 
+    private ClienteInadimplente addNicknameWhenMissing(
+            ClienteInadimplente client,
+            String nickname) {
+        var normalizedNickname = normalizeNickname(nickname);
+        if (client.getNickname() == null && normalizedNickname != null) {
+            client.setNickname(normalizedNickname);
+        }
+        return client;
+    }
+
+    private String normalizeNickname(String nickname) {
+        if (nickname == null || nickname.isBlank()) {
+            return null;
+        }
+        return nickname.trim();
+    }
+
     @Transactional(readOnly = true)
-    public Page<RespostaDivida> list(Usuario current, String cpf, UUID commerceId, StatusDivida status,
+    public Page<RespostaDivida> list(Usuario current, String search, UUID commerceId, StatusDivida status,
             BigDecimal minValue, BigDecimal maxValue, Pageable pageable) {
         commerceService.exigirComercioAprovadoParaConsulta(current);
         Specification<Divida> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
-            if (cpf != null && !cpf.isBlank())
-                predicates.add(cb.like(root.get("client").get("cpf"), cpf + "%"));
+            if (search != null && !search.isBlank()) {
+                var normalizedSearch = search.trim();
+                if (normalizedSearch.matches("[\\d.\\-\\s]+")) {
+                    var cpfDigits = normalizedSearch.replaceAll("\\D", "");
+                    predicates.add(cb.like(
+                            root.get("client").get("cpf"),
+                            cpfDigits + "%"));
+                } else {
+                    predicates.add(cb.like(
+                            cb.lower(root.get("client").get("nickname")),
+                            "%" + normalizedSearch.toLowerCase(Locale.ROOT) + "%"));
+                }
+            }
             if (commerceId != null) predicates.add(cb.equal(root.get("commerce").get("id"), commerceId));
             if (status != null) predicates.add(cb.equal(root.get("status"), status));
             if (minValue != null) predicates.add(cb.greaterThanOrEqualTo(root.get("debtValue"), minValue));
@@ -98,7 +129,7 @@ public class ServicoInadimplencia {
         var c = clients.findById(id).orElseThrow(() -> new ExcecaoApi(HttpStatus.NOT_FOUND, "Cliente não encontrado"));
         auditLogs.save(RegistroAuditoria.of(current, "VIEW_FULL_CPF", "ClienteInadimplente", id,
                 c.getName() + " " + c.getSurname(), "Consultou os dados detalhados do cliente"));
-        return new DetalhesCliente(c.getId(), c.getName(), c.getSurname(), mask(c.getCpf()),
+        return new DetalhesCliente(c.getId(), c.getName(), c.getSurname(), c.getNickname(), mask(c.getCpf()),
                 maskPhone(c.getTelephone()), c.getResidence(), c.getDescription());
     }
 
@@ -125,7 +156,7 @@ public class ServicoInadimplencia {
                 && current.getPerfilAcesso() == PerfilAcesso.MERCHANT_OWNER
                 && d.getComercio().getComerciante().getId().equals(current.getId());
         return new RespostaDivida(d.getId(),
-                new ResumoCliente(c.getId(), c.getName(), c.getSurname(), mask(c.getCpf())),
+                new ResumoCliente(c.getId(), c.getName(), c.getSurname(), c.getNickname(), mask(c.getCpf())),
                 d.getComercio().getId(), d.getComercio().getComercioName(), d.getDividaValue(),
                 d.getDateValue(), d.getCreatedAt(), d.getDescription(), d.isHasInterest(), d.getInterestRate(), d.getStatus(),
                 podeDarBaixa);

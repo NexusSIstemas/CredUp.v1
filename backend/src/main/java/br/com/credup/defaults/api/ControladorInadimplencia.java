@@ -47,8 +47,8 @@ public class ControladorInadimplencia {
             @Valid @RequestBody(required = false) SolicitacaoBuscaRede request,
             @PageableDefault(size = 20, sort = "dateValue", direction = Sort.Direction.DESC)
             Pageable pageable) {
-        String cpf = request == null ? null : request.cpf();
-        return service.list(user, cpf, null, null, null, null, pageable);
+        String busca = request == null ? null : request.busca();
+        return service.list(user, busca, null, null, null, null, pageable);
     }
 
     @GetMapping("/clients/{id}")

@@ -58,7 +58,13 @@ export interface Comercio {
 
 export interface Divida {
   id: string
-  cliente: { id: string; nome: string; sobrenome: string; cpfMascarado: string }
+  cliente: {
+    id: string
+    nome: string
+    sobrenome: string
+    apelido: string | null
+    cpfMascarado: string
+  }
   idComercio: string
   nomeComercio: string
   valorDivida: number

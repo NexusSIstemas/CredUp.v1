@@ -11,6 +11,7 @@ import java.util.UUID;
 public class ClienteInadimplente extends EntidadeBase {
     @Column(name = "nome", nullable = false) private String name;
     @Column(name = "sobrenome", nullable = false) private String surname;
+    @Column(name = "apelido", length = 120) private String nickname;
     @Column(nullable = false, unique = true, length = 11) private String cpf;
     @Column(name = "telefone") private String telephone;
     @Column(name = "residencia") private String residence;
@@ -30,6 +31,14 @@ public class ClienteInadimplente extends EntidadeBase {
 
     public void setSurname(String surname) {
         this.surname = surname;
+    }
+
+    public String getNickname() {
+        return nickname;
+    }
+
+    public void setNickname(String nickname) {
+        this.nickname = nickname;
     }
 
     public String getCpf() {

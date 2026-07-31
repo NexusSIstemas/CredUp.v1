@@ -165,9 +165,9 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
     .then(setComercios)
     .catch(showError)
     .finally(() => setComerciosCarregados(true))
-  const loadDividas = (cpf = '') => api<Pagina<Divida>>('/get_inadimplentes', {
+  const loadDividas = (busca = '') => api<Pagina<Divida>>('/get_inadimplentes', {
     method: 'POST',
-    body: JSON.stringify({ cpf: cpf.replace(/\D/g, '') })
+    body: JSON.stringify({ busca: busca.trim() || null })
   }).then(page => setDividas(
     [...page.content].sort(
       (primeira, segunda) =>
@@ -191,14 +191,14 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   }, [])
 
   useEffect(() => {
-    const cpf = query.replace(/\D/g, '')
+    const busca = query.trim()
     if (owner && !commercesLoaded) return
     if (owner && !hasApprovedCommerce) {
       setDividas([])
       return
     }
-    if (cpf.length > 0 && cpf.length < 3) return
-    const timer = window.setTimeout(() => loadDividas(cpf), 500)
+    if (busca.length > 0 && busca.length < 3) return
+    const timer = window.setTimeout(() => loadDividas(busca), 500)
     return () => window.clearTimeout(timer)
   }, [query, owner, commercesLoaded, hasApprovedCommerce])
 
@@ -321,7 +321,8 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
           idComercio: form.get('idComercio'), valorDivida,
           dataDivida: form.get('dataDivida'), descricao: form.get('descricao'), possuiJuros: false,
           cliente: {
-            nome: form.get('nome'), sobrenome: form.get('sobrenome'), cpf: digits(form.get('cpf')),
+            nome: form.get('nome'), sobrenome: form.get('sobrenome'), apelido: form.get('apelido'),
+            cpf: digits(form.get('cpf')),
             telefone: digits(form.get('telefone')), residencia: form.get('residencia')
           }
         })
@@ -580,19 +581,18 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
           <div className="cabecalho-painel-conteudo"><div><h2>Consulta da rede</h2><p>CPF sempre protegido na listagem.</p></div>
             <form className="busca" onSubmit={event => {
               event.preventDefault()
-              const cpf = query.replace(/\D/g, '')
-              if (cpf.length > 0 && cpf.length < 3) {
-                showAlert('Insira pelo menos os 3 primeiros dígitos do CPF', 'alerta')
+              const busca = query.trim()
+              if (busca.length > 0 && busca.length < 3) {
+                showAlert('Insira pelo menos 3 dígitos do CPF ou 3 caracteres do apelido', 'alerta')
                 return
               }
-              loadDividas(cpf)
-            }}><CampoFlutuante label="Buscar cliente por CPF"><input value={query} inputMode="numeric" maxLength={14} onChange={event => {
-              const nextValue = cpfMask(event.target.value)
-              setQuery(nextValue)
+              loadDividas(busca)
+            }}><CampoFlutuante label="Buscar por CPF ou apelido"><input value={query} maxLength={120} onChange={event => {
+              setQuery(event.target.value)
             }} placeholder=" " /></CampoFlutuante><button>Buscar</button></form>
           </div>
           <div className="envoltorio-tabela"><table><thead><tr><th>Cliente</th><th>CPF</th><th>Comércio</th><th>Data da dívida</th><th>Data do cadastro</th><th>Valor</th><th>Status</th><th></th></tr></thead>
-            <tbody>{debts.map(debt => <tr key={debt.id}><td><strong className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? `${debt.cliente.nome} ${debt.cliente.sobrenome}` : 'Cliente protegido'}</strong></td><td className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? debt.cliente.cpfMascarado : '***.***.***-**'}</td><td>{debt.nomeComercio}</td><td>{new Date(`${debt.dataDivida}T12:00:00`).toLocaleDateString('pt-BR')}</td><td>{new Date(debt.dataCadastro).toLocaleString('pt-BR')}</td><td className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? debt.valorDivida.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ •••••'}</td><td><span className={`indicador ${classesStatusDivida[debt.status]}`}>{debtStatusLabels[debt.status]}</span></td><td>{debt.status !== 'PAID' && debt.podeDarBaixa && <button className="pequeno" onClick={() => settle(debt.id)}>Dar baixa</button>}</td></tr>)}
+            <tbody>{debts.map(debt => <tr key={debt.id}><td><strong className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? `${debt.cliente.nome} ${debt.cliente.sobrenome}` : 'Cliente protegido'}</strong>{privacyVisible && debt.cliente.apelido && <small>Apelido: {debt.cliente.apelido}</small>}</td><td className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? debt.cliente.cpfMascarado : '***.***.***-**'}</td><td>{debt.nomeComercio}</td><td>{new Date(`${debt.dataDivida}T12:00:00`).toLocaleDateString('pt-BR')}</td><td>{new Date(debt.dataCadastro).toLocaleString('pt-BR')}</td><td className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? debt.valorDivida.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ •••••'}</td><td><span className={`indicador ${classesStatusDivida[debt.status]}`}>{debtStatusLabels[debt.status]}</span></td><td>{debt.status !== 'PAID' && debt.podeDarBaixa && <button className="pequeno" onClick={() => settle(debt.id)}>Dar baixa</button>}</td></tr>)}
               {!debts.length && <tr><td colSpan={8} className="vazio">Nenhum registro encontrado.</td></tr>}</tbody></table></div>
         </section>
         {owner && <section className="painel-conteudo painel-formulario"><div className="cabecalho-painel-conteudo"><div><h2>Nova inadimplência</h2><p>Cadastre um cliente e sua dívida em um comércio aprovado.</p></div></div>
@@ -601,6 +601,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
             <div className="grade-formulario">
               <CampoFlutuante label="Nome"><input name="nome" placeholder=" " required /></CampoFlutuante>
               <CampoFlutuante label="Sobrenome"><input name="sobrenome" placeholder=" " required /></CampoFlutuante>
+              <CampoFlutuante label="Apelido (opcional)"><input name="apelido" maxLength={120} placeholder=" " /></CampoFlutuante>
               <CampoFlutuante label="CPF: 000.000.000-00"><input name="cpf" inputMode="numeric" maxLength={14} placeholder=" " onInput={event => { event.currentTarget.value = cpfMask(event.currentTarget.value) }} required /></CampoFlutuante>
               <CampoFlutuante label="Telefone: (11) 99999-9999"><input name="telefone" inputMode="tel" maxLength={15} placeholder=" " onInput={event => { event.currentTarget.value = phoneMask(event.currentTarget.value) }} /></CampoFlutuante>
             </div>
