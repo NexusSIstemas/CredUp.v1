@@ -1,0 +1,106 @@
+name: Publicar CredUp na VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: producao
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    name: Publicar em produção
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Preparar acesso SSH
+        env:
+          CHAVE_SSH: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          HOST_CONHECIDO: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$CHAVE_SSH" > "$HOME/.ssh/credup_deploy"
+          chmod 600 "$HOME/.ssh/credup_deploy"
+          printf '%s\n' "$HOST_CONHECIDO" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+      - name: Validar diretório da VPS
+        env:
+          DIRETORIO: ${{ secrets.VPS_DEPLOY_PATH }}
+        run: |
+          case "$DIRETORIO" in
+            /opt/*|/srv/*) ;;
+            *)
+              echo "VPS_DEPLOY_PATH deve estar dentro de /opt ou /srv."
+              exit 1
+              ;;
+          esac
+
+      - name: Enviar arquivos para a VPS
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          PORTA: ${{ secrets.VPS_PORT }}
+          USUARIO: ${{ secrets.VPS_USER }}
+          DIRETORIO: ${{ secrets.VPS_DEPLOY_PATH }}
+        run: |
+          ssh \
+            -i "$HOME/.ssh/credup_deploy" \
+            -p "$PORTA" \
+            "$USUARIO@$HOST" \
+            "mkdir -p '$DIRETORIO'"
+
+          rsync \
+            --archive \
+            --compress \
+            --delete \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='.env' \
+            --exclude='.env.production' \
+            --exclude='node_modules/' \
+            --exclude='target/' \
+            --exclude='dist/' \
+            -e "ssh -i $HOME/.ssh/credup_deploy -p $PORTA" \
+            ./ \
+            "$USUARIO@$HOST:$DIRETORIO/"
+
+      - name: Executar publicação
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          PORTA: ${{ secrets.VPS_PORT }}
+          USUARIO: ${{ secrets.VPS_USER }}
+          DIRETORIO: ${{ secrets.VPS_DEPLOY_PATH }}
+        run: |
+          ssh \
+            -i "$HOME/.ssh/credup_deploy" \
+            -p "$PORTA" \
+            "$USUARIO@$HOST" \
+            "cd '$DIRETORIO' && chmod +x scripts/*.sh && ./scripts/deploy-production.sh"
+
+      - name: Verificar aplicação
+        run: |
+          for tentativa in $(seq 1 20); do
+            if curl \
+              --fail \
+              --silent \
+              --show-error \
+              --max-time 10 \
+              "https://nexus.vps10413.panel.icontainer.cloud/health"
+            then
+              echo "CredUp publicado com sucesso."
+              exit 0
+            fi
+
+            echo "Aguardando a aplicação iniciar ($tentativa/20)..."
+            sleep 10
+          done
+
+          echo "A aplicação não respondeu dentro do tempo esperado."
+          exit 1
