@@ -33,7 +33,7 @@ jobs:
 
       - name: Validar diretório da VPS
         env:
-          DIRETORIO: ${{ secrets.VPS_DEPLOY_PATH }}
+          DIRETORIO: ${{ secrets.VPS_DEPLOY_PATH || '/opt/credup' }}
         run: |
           case "$DIRETORIO" in
             /opt/*|/srv/*) ;;
@@ -48,7 +48,7 @@ jobs:
           HOST: ${{ secrets.VPS_HOST }}
           PORTA: ${{ secrets.VPS_PORT }}
           USUARIO: ${{ secrets.VPS_USER }}
-          DIRETORIO: ${{ secrets.VPS_DEPLOY_PATH }}
+          DIRETORIO: ${{ secrets.VPS_DEPLOY_PATH || '/opt/credup' }}
         run: |
           ssh \
             -i "$HOME/.ssh/credup_deploy" \
@@ -76,7 +76,7 @@ jobs:
           HOST: ${{ secrets.VPS_HOST }}
           PORTA: ${{ secrets.VPS_PORT }}
           USUARIO: ${{ secrets.VPS_USER }}
-          DIRETORIO: ${{ secrets.VPS_DEPLOY_PATH }}
+          DIRETORIO: ${{ secrets.VPS_DEPLOY_PATH || '/opt/credup' }}
         run: |
           ssh \
             -i "$HOME/.ssh/credup_deploy" \
