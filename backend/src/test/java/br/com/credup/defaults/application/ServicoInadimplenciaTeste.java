@@ -25,7 +25,8 @@ class ServicoInadimplenciaTest {
         var debts = mock(RepositorioDivida.class);
         var commerces = mock(ServicoComercio.class);
         var audit = mock(RepositorioRegistroAuditoria.class);
-        var service = new ServicoInadimplencia(clients, debts, commerces, audit);
+        var subscriptions = mock(br.com.credup.billing.application.ServicoAssinatura.class);
+        var service = new ServicoInadimplencia(clients, debts, commerces, audit, subscriptions);
         var merchant = new Comerciante();
         var commerce = mock(Comercio.class);
         var client = mock(ClienteInadimplente.class);

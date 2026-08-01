@@ -6,9 +6,9 @@ import {
   type TomAlerta
 } from '../services/alertas'
 import { CampoFlutuante } from '../components/CampoFlutuante'
-import type { Comercio, StatusComercio, Divida, StatusDivida, Funcionario, Pagina, SolicitacaoRedefinicaoSenha, Perfil, PerfilAcesso, RegistroAuditoria, Sessao } from '../types'
+import type { Assinatura, Comercio, StatusComercio, Divida, StatusDivida, Funcionario, Pagina, SolicitacaoRedefinicaoSenha, Perfil, PerfilAcesso, RegistroAuditoria, Sessao } from '../types'
 
-type Secao = 'overview' | 'commerces' | 'defaults' | 'staff' | 'recovery' | 'auditoria' | 'perfil'
+type Secao = 'overview' | 'commerces' | 'defaults' | 'staff' | 'recovery' | 'auditoria' | 'assinatura' | 'perfil'
 
 const roleLabels: Record<PerfilAcesso, string> = {
   ADMIN_REDE: 'Administrador da rede',
@@ -44,8 +44,21 @@ const actionLabels: Record<string, string> = {
   REVISAR_COMERCIO: 'Revisou um comércio',
   EDITAR_COMERCIO: 'Editou um comércio',
   EXCLUIR_COMERCIO: 'Excluiu um comércio',
-  GERAR_RELATORIO_INADIMPLENCIAS: 'Gerou um relatório de inadimplências'
+  GERAR_RELATORIO_INADIMPLENCIAS: 'Gerou um relatório de inadimplências',
+  SOLICITAR_ATIVACAO_ASSINATURA: 'Solicitou a ativação da assinatura',
+  ATIVAR_ASSINATURA: 'Ativou uma assinatura',
+  RENOVAR_ASSINATURA: 'Renovou uma assinatura',
+  CANCELAR_ASSINATURA: 'Cancelou uma assinatura'
 }
+
+const subscriptionStatusLabels = {
+  AGUARDANDO_APROVACAO: 'Aguardando aprovação',
+  EM_TESTE: 'Período de teste',
+  ATIVA: 'Ativa',
+  ATRASADA: 'Pagamento pendente',
+  EXPIRADA: 'Teste encerrado',
+  CANCELADA: 'Cancelada'
+} as const
 
 const describeAuditAction = (record: RegistroAuditoria) => {
   if (record.acao === 'DAR_BAIXA_DIVIDA' && record.alvoDescricao) {
@@ -150,6 +163,11 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   const [auditRecords, setRegistrosAuditoria] = useState<RegistroAuditoria[]>([])
   const [auditOnline, setAuditoriaOnline] = useState(false)
   const [generatingReport, setGerandoRelatorio] = useState(false)
+  const [subscription, setAssinatura] = useState<Assinatura | null>(null)
+  const [subscriptions, setAssinaturas] = useState<Assinatura[]>([])
+  const [subscriptionQuery, setBuscaAssinatura] = useState('')
+  const [subscriptionStatus, setStatusAssinatura] = useState('TODAS')
+  const [subscriptionLoaded, setAssinaturaCarregada] = useState(false)
   const admin = sessao.perfilAcesso === 'ADMIN_REDE'
   const owner = sessao.perfilAcesso === 'MERCHANT_OWNER'
   const staff = sessao.perfilAcesso === 'MERCHANT_STAFF'
@@ -183,15 +201,35 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
       setAuditoriaOnline(true)
     })
     .catch(() => setAuditoriaOnline(false))
+  const loadSubscription = () => api<Assinatura>('/assinaturas/minha')
+    .then(setAssinatura)
+    .catch(showError)
+    .finally(() => setAssinaturaCarregada(true))
+  const loadSubscriptions = () => api<Assinatura[]>('/assinaturas')
+    .then(setAssinaturas)
+    .catch(showError)
 
   useEffect(() => {
     if (!staff) loadComercios()
-    if (admin) loadResets()
-    if (owner) loadStaff()
+    if (admin) {
+      loadResets()
+      loadSubscriptions()
+    } else {
+      loadSubscription()
+    }
   }, [])
 
   useEffect(() => {
+    if (owner && subscription?.acessoOperacional) loadStaff()
+  }, [owner, subscription?.acessoOperacional])
+
+  useEffect(() => {
     const busca = query.trim()
+    if (!admin && !subscriptionLoaded) return
+    if (!admin && !subscription?.acessoOperacional) {
+      setDividas([])
+      return
+    }
     if (owner && !commercesLoaded) return
     if (owner && !hasApprovedCommerce) {
       setDividas([])
@@ -200,7 +238,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
     if (busca.length > 0 && busca.length < 3) return
     const timer = window.setTimeout(() => loadDividas(busca), 500)
     return () => window.clearTimeout(timer)
-  }, [query, owner, commercesLoaded, hasApprovedCommerce])
+  }, [query, owner, admin, commercesLoaded, hasApprovedCommerce, subscriptionLoaded, subscription?.acessoOperacional])
 
   useEffect(() => {
     if (!admin || section !== 'auditoria') return
@@ -210,6 +248,12 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   }, [admin, section])
 
   function openSecao(next: Secao) {
+    if (!admin && subscriptionLoaded && !subscription?.acessoOperacional
+      && ['defaults', 'staff'].includes(next)) {
+      showAlert('Seu acesso operacional está bloqueado. Consulte sua assinatura.', 'alerta')
+      setSecao('assinatura')
+      return
+    }
     if (owner && next === 'defaults' && !commercesLoaded) {
       showAlert('Aguarde enquanto verificamos seus comércios.', 'informacao')
       return
@@ -230,6 +274,28 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
     if (next === 'perfil') loadPerfil()
     if (next === 'staff') loadStaff()
     if (next === 'auditoria') loadAuditoria()
+    if (next === 'assinatura') admin ? loadSubscriptions() : loadSubscription()
+  }
+
+  async function requestSubscriptionActivation() {
+    try {
+      const updated = await api<Assinatura>('/assinaturas/minha/solicitar-ativacao', { method: 'POST' })
+      setAssinatura(updated)
+      showAlert('Solicitação enviada ao administrador.', 'sucesso')
+    } catch (erro) { showError(erro) }
+  }
+
+  async function changeSubscription(id: string, action: 'ativar' | 'renovar' | 'cancelar') {
+    try {
+      await api(`/assinaturas/${id}/${action}`, { method: 'PATCH' })
+      const messages = {
+        ativar: 'Assinatura ativada.',
+        renovar: 'Assinatura renovada por mais 30 dias.',
+        cancelar: 'Assinatura cancelada.'
+      }
+      showAlert(messages[action], 'sucesso')
+      loadSubscriptions()
+    } catch (erro) { showError(erro) }
   }
 
   async function createComercio(event: FormEvent<HTMLFormElement>) {
@@ -464,6 +530,12 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
 
   const openDividas = debts.filter(debt => debt.status !== 'PAID' && debt.status !== 'CANCELED')
   const openValue = openDividas.reduce((sum, debt) => sum + debt.valorDivida, 0)
+  const filteredSubscriptions = subscriptions
+    .filter(item => subscriptionStatus === 'TODAS' || item.status === subscriptionStatus)
+    .filter(item => `${item.nomeComerciante} ${item.emailMascarado}`
+      .toLocaleLowerCase('pt-BR')
+      .includes(subscriptionQuery.trim().toLocaleLowerCase('pt-BR')))
+    .sort((first, second) => Number(Boolean(second.solicitacaoAtivacaoEm)) - Number(Boolean(first.solicitacaoAtivacaoEm)))
 
   return <div className="estrutura-aplicacao">
     <aside>
@@ -489,6 +561,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
               Recuperação {resetRequests.length > 0 && <span>{resetRequests.length}</span>}
             </button>}
             {admin && <button className={section === 'auditoria' ? 'ativo' : ''} onClick={() => openSecao('auditoria')}>Logs</button>}
+            <button className={section === 'assinatura' ? 'ativo' : ''} onClick={() => openSecao('assinatura')}>{admin ? 'Assinaturas' : 'Minha assinatura'}</button>
             <button className={`botao-perfil-navegacao ${section === 'perfil' ? 'ativo' : ''}`} onClick={() => openSecao('perfil')} aria-label="Abrir meu perfil">
               <b className="avatar-perfil-navegacao">{(perfil?.nome ?? sessao.nome)[0]}</b>
               <small>Meu perfil</small>
@@ -505,6 +578,12 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
           </button>
         </div>
       </header>
+
+      {!admin && subscription && <div className={`faixa-assinatura ${subscription.status === 'ATIVA' || subscription.diasRestantes > 7 ? 'verde' : subscription.diasRestantes >= 3 ? 'amarela' : 'vermelha'}`}>
+        <span className="semaforo-assinatura" />
+        <div><strong>{subscriptionStatusLabels[subscription.status]}</strong><small>{subscription.status === 'EM_TESTE' ? `${subscription.diasRestantes} dia(s) restantes no teste gratuito` : subscription.status === 'ATIVA' ? `Próxima renovação em ${subscription.proximaCobranca ? new Date(`${subscription.proximaCobranca}T12:00:00`).toLocaleDateString('pt-BR') : '-'}` : 'Consulte os detalhes da sua assinatura'}</small></div>
+        <button className="pequeno" onClick={() => openSecao('assinatura')}>Ver assinatura</button>
+      </div>}
 
       {section === 'overview' && <section className="visualizacao-secao animar-entrada" key="overview">
         <div className="titulo-secao"><div><p className="sobretitulo">Resumo da rede</p><h2>Visão geral</h2></div><p>Acompanhe os principais números antes de entrar nos detalhes.</p></div>
@@ -567,7 +646,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
 
       {section === 'defaults' && <section className="visualizacao-secao animar-entrada" key="defaults">
         <div className="titulo-secao"><div><p className="sobretitulo">Rede compartilhada</p><h2>Inadimplentes</h2></div><p>Consulte registros e gerencie dívidas sem expor o CPF completo.</p></div>
-        {!staff && <section className="painel-conteudo">
+        {!staff && (admin || subscription?.podeGerarRelatorio) && <section className="painel-conteudo">
           <div className="cabecalho-painel-conteudo"><div><h2>Relatório em PDF</h2><p>Escolha um dos seus comércios ou selecione “Todos” para incluir toda a rede.</p></div></div>
           <form className="filtros-relatorio" onSubmit={generateReport}>
             <CampoFlutuante label="Data inicial da dívida"><input name="dataInicio" type="date" min="2000-01-01" max={currentDate()} placeholder=" " required /></CampoFlutuante>
@@ -576,6 +655,10 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
             <CampoFlutuante label="Situação"><select name="status" defaultValue=""><option value="">Todas</option>{Object.entries(debtStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></CampoFlutuante>
             <button disabled={generatingReport}>{generatingReport ? 'Gerando PDF…' : 'Gerar relatório PDF'}</button>
           </form>
+        </section>}
+        {owner && subscription && !subscription.podeGerarRelatorio && <section className="painel-conteudo relatorio-bloqueado">
+          <span>🔒</span><div><h2>Relatórios em PDF</h2><p>Disponível no plano profissional. Durante o teste, suas informações permanecem no sistema, mas a exportação fica bloqueada.</p></div>
+          <button onClick={() => openSecao('assinatura')}>Conhecer o plano</button>
         </section>}
         <section className="painel-conteudo">
           <div className="cabecalho-painel-conteudo"><div><h2>Consulta da rede</h2><p>CPF sempre protegido na listagem.</p></div>
@@ -613,6 +696,43 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
             <CampoFlutuante label="Descrição da dívida"><textarea name="descricao" placeholder=" " /></CampoFlutuante><button>Cadastrar dívida</button>
           </form>
         </section>}
+      </section>}
+
+      {section === 'assinatura' && <section className="visualizacao-secao animar-entrada" key="assinatura">
+        <div className="titulo-secao"><div><p className="sobretitulo">Plano e acesso</p><h2>{admin ? 'Assinaturas' : 'Minha assinatura'}</h2></div><p>{admin ? 'Acompanhe e controle os acessos comerciais.' : 'Acompanhe seu teste gratuito e a situação do plano.'}</p></div>
+        {!admin && subscription && <section className="painel-conteudo cartao-assinatura">
+          <div className={`selo-assinatura ${subscription.status.toLowerCase()}`}>{subscriptionStatusLabels[subscription.status]}</div>
+          <h2>{subscription.plano === 'PROFISSIONAL' ? 'Plano profissional' : 'Teste gratuito de 30 dias'}</h2>
+          <p>{subscription.status === 'AGUARDANDO_APROVACAO' ? 'O teste começa somente quando o administrador aprovar seu primeiro comércio.' : subscription.status === 'EM_TESTE' ? `Você ainda tem ${subscription.diasRestantes} dia(s) de acesso às funções principais.` : subscription.status === 'ATIVA' ? 'Seu acesso completo está ativo, incluindo relatórios em PDF.' : 'As funções operacionais estão bloqueadas até a ativação do plano profissional.'}</p>
+          <dl className="detalhes-assinatura">
+            <div><dt>Início do teste</dt><dd>{subscription.inicioTeste ? new Date(`${subscription.inicioTeste}T12:00:00`).toLocaleDateString('pt-BR') : 'Após aprovação do comércio'}</dd></div>
+            <div><dt>Fim do teste</dt><dd>{subscription.fimTeste ? new Date(`${subscription.fimTeste}T12:00:00`).toLocaleDateString('pt-BR') : '-'}</dd></div>
+            <div><dt>Relatórios PDF</dt><dd>{subscription.podeGerarRelatorio ? 'Liberados' : 'Plano profissional'}</dd></div>
+          </dl>
+          {owner && subscription.podeSolicitarAtivacao && <button onClick={requestSubscriptionActivation}>Solicitar plano profissional</button>}
+          {subscription.solicitacaoAtivacaoEm && <p className="solicitacao-enviada">Solicitação enviada. Aguarde a análise do administrador.</p>}
+        </section>}
+        {admin && <>
+          <div className="estatisticas estatisticas-assinaturas">
+            <article><small>Total de assinaturas</small><strong>{subscriptions.length}</strong><span>comerciantes cadastrados</span></article>
+            <article><small>Acessos liberados</small><strong>{subscriptions.filter(item => item.acessoOperacional).length}</strong><span>teste ou plano ativo</span></article>
+            <article><small>Solicitações pendentes</small><strong>{subscriptions.filter(item => item.solicitacaoAtivacaoEm).length}</strong><span>aguardando sua análise</span></article>
+          </div>
+          <section className="painel-conteudo">
+            <div className="cabecalho-painel-conteudo"><div><h2>Controle de assinaturas</h2><p>Ative, renove ou cancele o acesso de cada comerciante.</p></div>
+              <div className="filtros-assinaturas">
+                <CampoFlutuante label="Buscar comerciante"><input value={subscriptionQuery} onChange={event => setBuscaAssinatura(event.target.value)} placeholder=" " /></CampoFlutuante>
+                <CampoFlutuante label="Situação"><select value={subscriptionStatus} onChange={event => setStatusAssinatura(event.target.value)}><option value="TODAS">Todas</option>{Object.entries(subscriptionStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></CampoFlutuante>
+              </div>
+            </div>
+            <div className="lista-assinaturas">{filteredSubscriptions.map(item => <article key={item.id} className={`item-assinatura ${item.solicitacaoAtivacaoEm ? 'solicitacao-pendente' : ''}`}>
+              <div><strong>{item.nomeComerciante}</strong><small>{item.emailMascarado}</small>{item.solicitacaoAtivacaoEm && <b>Solicitou ativação em {new Date(item.solicitacaoAtivacaoEm).toLocaleString('pt-BR')}</b>}</div>
+              <span className={`indicador ${item.acessoOperacional ? 'aprovado' : 'rejeitado'}`}>{subscriptionStatusLabels[item.status]}</span>
+              <div className="datas-assinatura"><small>{item.plano === 'PROFISSIONAL' ? 'Plano profissional' : `Teste · ${item.diasRestantes} dia(s)`}</small><small>Fim do teste: {item.fimTeste ? new Date(`${item.fimTeste}T12:00:00`).toLocaleDateString('pt-BR') : '-'}</small><small>Próxima cobrança: {item.proximaCobranca ? new Date(`${item.proximaCobranca}T12:00:00`).toLocaleDateString('pt-BR') : '-'}</small></div>
+              <div className="acoes-assinatura">{item.status === 'ATIVA' ? <button className="pequeno" onClick={() => changeSubscription(item.id, 'renovar')}>Renovar +30 dias</button> : <button className="pequeno" onClick={() => changeSubscription(item.id, 'ativar')}>Ativar por 30 dias</button>}<button className="pequeno perigo" disabled={item.status === 'CANCELADA'} onClick={() => changeSubscription(item.id, 'cancelar')}>Cancelar</button></div>
+            </article>)}{!filteredSubscriptions.length && <p className="vazio">Nenhuma assinatura encontrada com esses filtros.</p>}</div>
+          </section>
+        </>}
       </section>}
 
       {section === 'staff' && owner && <section className="visualizacao-secao animar-entrada" key="staff">

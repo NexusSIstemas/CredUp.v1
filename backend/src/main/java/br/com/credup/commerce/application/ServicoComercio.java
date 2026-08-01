@@ -6,6 +6,7 @@ import br.com.credup.commerce.repository.RepositorioComercio;
 import br.com.credup.defaults.repository.RepositorioDivida;
 import br.com.credup.audit.domain.RegistroAuditoria;
 import br.com.credup.audit.repository.RepositorioRegistroAuditoria;
+import br.com.credup.billing.application.ServicoAssinatura;
 import br.com.credup.identity.domain.*;
 import br.com.credup.shared.domain.*;
 import br.com.credup.shared.exception.ExcecaoApi;
@@ -19,16 +20,20 @@ public class ServicoComercio {
     private final RepositorioComercio commerces;
     private final RepositorioDivida dividas;
     private final RepositorioRegistroAuditoria registrosAuditoria;
+    private final ServicoAssinatura assinaturas;
 
     public ServicoComercio(RepositorioComercio commerces, RepositorioDivida dividas,
-            RepositorioRegistroAuditoria registrosAuditoria) {
+            RepositorioRegistroAuditoria registrosAuditoria,
+            ServicoAssinatura assinaturas) {
         this.commerces = commerces;
         this.dividas = dividas;
         this.registrosAuditoria = registrosAuditoria;
+        this.assinaturas = assinaturas;
     }
 
     @Transactional
     public RespostaComercio create(Usuario current, SolicitacaoCriacaoComercio request) {
+        assinaturas.exigirGerenciamentoComercio(current);
         if (!(current instanceof Comerciante merchant))
             throw new ExcecaoApi(HttpStatus.FORBIDDEN, "Apenas comerciantes podem cadastrar comércio");
         if (commerces.existsByCnpj(request.cnpj()))
@@ -66,6 +71,9 @@ public class ServicoComercio {
             throw new ExcecaoApi(HttpStatus.BAD_REQUEST, "A decisão deve ser APPROVED ou REJECTED");
         var commerce = get(id);
         commerce.setStatus(request.status());
+        if (request.status() == StatusComercio.APPROVED) {
+            assinaturas.iniciarTeste(commerce.getComerciante());
+        }
         registrosAuditoria.save(RegistroAuditoria.of(current, "REVISAR_COMERCIO", "Comercio", commerce.getId(),
                 commerce.getComercioName(), "Alterou a situação do comércio para " + request.status()));
         return map(commerce);
@@ -73,6 +81,7 @@ public class ServicoComercio {
 
     @Transactional
     public RespostaComercio update(Usuario current, UUID id, SolicitacaoAtualizacaoComercio request) {
+        assinaturas.exigirGerenciamentoComercio(current);
         var commerce = get(id);
         requireAccess(current, commerce);
         if (current.getPerfilAcesso() != PerfilAcesso.MERCHANT_OWNER)
@@ -91,6 +100,7 @@ public class ServicoComercio {
 
     @Transactional
     public void delete(Usuario current, UUID id) {
+        assinaturas.exigirGerenciamentoComercio(current);
         var commerce = get(id);
         requireAccess(current, commerce);
         if (current.getPerfilAcesso() != PerfilAcesso.MERCHANT_OWNER)

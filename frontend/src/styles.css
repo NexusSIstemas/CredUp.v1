@@ -269,6 +269,35 @@ td { padding:.9rem .75rem; border-bottom:1px solid #f0f2f1; font-size:.9rem; }
 .senha-temporaria small,.senha-temporaria strong { display:block; }
 .senha-temporaria strong { margin-top:.25rem; font-size:1.35rem; letter-spacing:.08em; }
 .quantidade-solicitacoes { padding:.35rem .65rem; border-radius:99px; color:#76570e; background:#fff2cb; font-size:.75rem; font-weight:700; }
+.faixa-assinatura { display:flex; align-items:center; gap:.8rem; margin-bottom:1rem; padding:.75rem 1rem; border:1px solid; border-radius:12px; }
+.faixa-assinatura div { display:grid; gap:.12rem; flex:1; }
+.faixa-assinatura small { opacity:.78; }
+.faixa-assinatura.verde { color:#155c3d; border-color:#b9dec9; background:#e2f5ea; }
+.faixa-assinatura.amarela { color:#72530c; border-color:#ead28e; background:#fff6d9; }
+.faixa-assinatura.vermelha { color:#8d3029; border-color:#ecc0bc; background:#fde9e7; }
+.semaforo-assinatura { width:11px; height:11px; border-radius:50%; background:currentColor; box-shadow:0 0 0 5px currentColor; opacity:.75; }
+.relatorio-bloqueado { display:flex; align-items:center; gap:1rem; }
+.relatorio-bloqueado>span { font-size:1.6rem; }
+.relatorio-bloqueado div { flex:1; }
+.cartao-assinatura { max-width:760px; }
+.selo-assinatura { display:inline-block; padding:.35rem .7rem; border-radius:99px; color:#17633f; background:#ddf5e8; font-size:.75rem; font-weight:800; }
+.selo-assinatura.expirada,.selo-assinatura.atrasada,.selo-assinatura.cancelada { color:#9d352d; background:#fde5e2; }
+.detalhes-assinatura { display:grid; grid-template-columns:repeat(3,1fr); gap:.7rem; margin:1.2rem 0; }
+.detalhes-assinatura div { padding:.8rem; border:1px solid #e3eae5; border-radius:10px; }
+.detalhes-assinatura dt { color:#78857e; font-size:.72rem; }
+.detalhes-assinatura dd { margin:.3rem 0 0; font-weight:700; }
+.solicitacao-enviada { color:#72530c; }
+.lista-assinaturas { display:grid; gap:.7rem; }
+.item-assinatura { display:grid; grid-template-columns:minmax(180px,1fr) auto auto auto; align-items:center; gap:1rem; padding:1rem; border:1px solid #e3eae5; border-radius:12px; }
+.item-assinatura>div:first-child { display:grid; gap:.2rem; }
+.item-assinatura>div:first-child b { color:#946b08; font-size:.72rem; }
+.item-assinatura small { color:#78857e; }
+.acoes-assinatura { display:flex; }
+.item-assinatura.solicitacao-pendente { border-color:#e2c461; background:#fffaf0; }
+.datas-assinatura { display:grid; gap:.2rem; }
+.filtros-assinaturas { display:grid; grid-template-columns:minmax(220px,1fr) minmax(180px,.6fr); gap:.6rem; width:min(520px,100%); }
+.filtros-assinaturas label,.filtros-assinaturas input,.filtros-assinaturas select { margin:0; }
+.estatisticas-assinaturas { margin-bottom:1rem; }
 @media (max-width:900px) {
   .estrutura-autenticacao { grid-template-columns:1fr; }
   .apresentacao-autenticacao { min-height:360px; padding:2rem; }
@@ -283,6 +312,7 @@ td { padding:.9rem .75rem; border-bottom:1px solid #f0f2f1; font-size:.9rem; }
   .navegacao-superior { width:100%; overflow-x:auto; }
   .estatisticas,.estatisticas.duas-colunas,.colunas,.colunas-secao,.grade-visao-geral,.estrutura-perfil { grid-template-columns:1fr; }
   .filtros-relatorio { grid-template-columns:1fr 1fr; }
+  .detalhes-assinatura,.item-assinatura,.filtros-assinaturas { grid-template-columns:1fr; }
   .cabecalho-painel-conteudo { align-items:stretch; flex-direction:column; }
   .titulo-secao { align-items:flex-start; flex-direction:column; gap:.5rem; }
   .titulo-secao>p { text-align:left; }

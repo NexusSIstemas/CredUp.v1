@@ -1,6 +1,26 @@
 export type PerfilAcesso = 'ADMIN_REDE' | 'MERCHANT_OWNER' | 'MERCHANT_STAFF'
 export type StatusComercio = 'PENDING' | 'APPROVED' | 'REJECTED'
 export type StatusDivida = 'PENDING' | 'DISPUTED' | 'NEGOTIATING' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELED'
+export type PlanoAssinatura = 'TESTE' | 'PROFISSIONAL'
+export type StatusAssinatura = 'AGUARDANDO_APROVACAO' | 'EM_TESTE' | 'ATIVA' | 'ATRASADA' | 'EXPIRADA' | 'CANCELADA'
+
+export interface Assinatura {
+  id: string
+  idComerciante: string
+  nomeComerciante: string
+  emailMascarado: string
+  plano: PlanoAssinatura
+  status: StatusAssinatura
+  inicioTeste: string | null
+  fimTeste: string | null
+  inicioAssinatura: string | null
+  proximaCobranca: string | null
+  solicitacaoAtivacaoEm: string | null
+  diasRestantes: number
+  acessoOperacional: boolean
+  podeGerarRelatorio: boolean
+  podeSolicitarAtivacao: boolean
+}
 
 export interface Sessao {
   token: string

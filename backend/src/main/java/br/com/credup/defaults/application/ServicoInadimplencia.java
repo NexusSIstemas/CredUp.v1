@@ -3,6 +3,7 @@ package br.com.credup.defaults.application;
 import br.com.credup.audit.domain.RegistroAuditoria;
 import br.com.credup.audit.repository.RepositorioRegistroAuditoria;
 import br.com.credup.commerce.application.ServicoComercio;
+import br.com.credup.billing.application.ServicoAssinatura;
 import br.com.credup.defaults.api.DtosInadimplencia.*;
 import br.com.credup.defaults.domain.*;
 import br.com.credup.defaults.repository.*;
@@ -26,17 +27,20 @@ public class ServicoInadimplencia {
     private final RepositorioDivida debts;
     private final ServicoComercio commerceService;
     private final RepositorioRegistroAuditoria auditLogs;
+    private final ServicoAssinatura assinaturas;
 
     public ServicoInadimplencia(RepositorioClienteInadimplente clients, RepositorioDivida debts, ServicoComercio commerceService,
-                          RepositorioRegistroAuditoria auditLogs) {
+                          RepositorioRegistroAuditoria auditLogs, ServicoAssinatura assinaturas) {
         this.clients = clients;
         this.debts = debts;
         this.commerceService = commerceService;
         this.auditLogs = auditLogs;
+        this.assinaturas = assinaturas;
     }
 
     @Transactional
     public RespostaDivida create(Usuario current, SolicitacaoCriacaoDivida request) {
+        assinaturas.exigirAcessoOperacional(current);
         var commerce = commerceService.get(request.idComercio());
         commerceService.requireAccess(current, commerce);
         if (commerce.getStatus() != StatusComercio.APPROVED)
@@ -98,6 +102,7 @@ public class ServicoInadimplencia {
     @Transactional(readOnly = true)
     public Page<RespostaDivida> list(Usuario current, String search, UUID commerceId, StatusDivida status,
             BigDecimal minValue, BigDecimal maxValue, Pageable pageable) {
+        assinaturas.exigirAcessoOperacional(current);
         commerceService.exigirComercioAprovadoParaConsulta(current);
         Specification<Divida> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -125,6 +130,7 @@ public class ServicoInadimplencia {
 
     @Transactional
     public DetalhesCliente clientDetail(Usuario current, UUID id) {
+        assinaturas.exigirAcessoOperacional(current);
         commerceService.exigirComercioAprovadoParaConsulta(current);
         var c = clients.findById(id).orElseThrow(() -> new ExcecaoApi(HttpStatus.NOT_FOUND, "Cliente não encontrado"));
         auditLogs.save(RegistroAuditoria.of(current, "VIEW_FULL_CPF", "ClienteInadimplente", id,
@@ -135,6 +141,7 @@ public class ServicoInadimplencia {
 
     @Transactional
     public RespostaDivida settle(Usuario current, UUID id) {
+        assinaturas.exigirAcessoOperacional(current);
         var debt = debts.findById(id).orElseThrow(() -> new ExcecaoApi(HttpStatus.NOT_FOUND, "Dívida não encontrada"));
         commerceService.requireAccess(current, debt.getComercio());
         if (debt.getStatus() == StatusDivida.PAID || debt.getStatus() == StatusDivida.CANCELED)

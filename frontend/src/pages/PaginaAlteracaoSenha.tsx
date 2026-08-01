@@ -15,7 +15,7 @@ export function PaginaAlteracaoSenha({ onChanged, onLogout }: {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     if (form.get('novaSenha') !== form.get('confirmacao')) {
-      await mostrarAlerta(
+      mostrarAlerta(
         'A confirmação não corresponde à nova senha.',
         'alerta'
       )
@@ -32,7 +32,7 @@ export function PaginaAlteracaoSenha({ onChanged, onLogout }: {
       })
       onChanged(sessao)
     } catch (e) {
-      await mostrarAlerta(
+      mostrarAlerta(
         e instanceof Error ? e.message : 'Não foi possível trocar a senha.',
         'erro'
       )

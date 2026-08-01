@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import br.com.credup.identity.domain.Usuario;
+import br.com.credup.billing.application.ServicoAssinatura;
 import br.com.credup.reports.application.ServicoRelatorioInadimplencia;
 import br.com.credup.shared.domain.StatusDivida;
 
@@ -23,9 +24,11 @@ import br.com.credup.shared.domain.StatusDivida;
 @RequestMapping("/api/relatorios")
 public class ControladorRelatorio {
     private final ServicoRelatorioInadimplencia servico;
+    private final ServicoAssinatura assinaturas;
 
-    public ControladorRelatorio(ServicoRelatorioInadimplencia servico) {
+    public ControladorRelatorio(ServicoRelatorioInadimplencia servico, ServicoAssinatura assinaturas) {
         this.servico = servico;
+        this.assinaturas = assinaturas;
     }
 
     @GetMapping(value = "/inadimplencias.pdf", produces = MediaType.APPLICATION_PDF_VALUE)
@@ -39,6 +42,7 @@ public class ControladorRelatorio {
             LocalDate dataFim,
             @RequestParam(required = false) UUID idComercio,
             @RequestParam(required = false) StatusDivida status) {
+        assinaturas.exigirRelatorio(usuario);
         byte[] pdf = servico.gerar(usuario, dataInicio, dataFim, idComercio, status);
         String nome = "relatorio-inadimplencias-" + LocalDate.now(ZoneId.of("America/Sao_Paulo")) + ".pdf";
         return ResponseEntity.ok()

@@ -5,6 +5,7 @@ import br.com.credup.identity.domain.Comerciante;
 import br.com.credup.identity.repository.*;
 import br.com.credup.auth.domain.SolicitacaoRedefinicaoSenha;
 import br.com.credup.auth.repository.RepositorioSolicitacaoRedefinicaoSenha;
+import br.com.credup.billing.application.ServicoAssinatura;
 import br.com.credup.commerce.repository.RepositorioComercio;
 import br.com.credup.security.ServicoJwt;
 import br.com.credup.shared.domain.PerfilAcesso;
@@ -27,17 +28,20 @@ public class ServicoAutenticacao {
     private final ServicoJwt jwt;
     private final RepositorioComercio commerces;
     private final RepositorioSolicitacaoRedefinicaoSenha solicitacoesRedefinicao;
+    private final ServicoAssinatura assinaturas;
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String TEMP_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
 
     public ServicoAutenticacao(RepositorioUsuario users, RepositorioComerciante merchants, PasswordEncoder codificador, ServicoJwt jwt,
-                       RepositorioComercio commerces, RepositorioSolicitacaoRedefinicaoSenha solicitacoesRedefinicao) {
+                       RepositorioComercio commerces, RepositorioSolicitacaoRedefinicaoSenha solicitacoesRedefinicao,
+                       ServicoAssinatura assinaturas) {
         this.users = users;
         this.merchants = merchants;
         this.codificador = codificador;
         this.jwt = jwt;
         this.commerces = commerces;
         this.solicitacoesRedefinicao = solicitacoesRedefinicao;
+        this.assinaturas = assinaturas;
     }
 
     @Transactional
@@ -60,6 +64,7 @@ public class ServicoAutenticacao {
         merchant.setDateBirth(request.dataNascimento());
         merchant.setPerfilAcesso(PerfilAcesso.MERCHANT_OWNER);
         merchants.save(merchant);
+        assinaturas.criarPara(merchant);
         return response(merchant);
     }
 

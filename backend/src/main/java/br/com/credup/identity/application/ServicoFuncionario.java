@@ -2,6 +2,7 @@ package br.com.credup.identity.application;
 
 import br.com.credup.audit.domain.RegistroAuditoria;
 import br.com.credup.audit.repository.RepositorioRegistroAuditoria;
+import br.com.credup.billing.application.ServicoAssinatura;
 import br.com.credup.identity.api.DtosFuncionario.*;
 import br.com.credup.identity.domain.*;
 import br.com.credup.identity.repository.*;
@@ -24,19 +25,22 @@ public class ServicoFuncionario {
     private final RepositorioFuncionarioComercio staffRepository;
     private final PasswordEncoder codificador;
     private final RepositorioRegistroAuditoria auditLogs;
+    private final ServicoAssinatura assinaturas;
 
     public ServicoFuncionario(RepositorioUsuario users, RepositorioComerciante merchants,
             RepositorioFuncionarioComercio staffRepository, PasswordEncoder codificador,
-            RepositorioRegistroAuditoria auditLogs) {
+            RepositorioRegistroAuditoria auditLogs, ServicoAssinatura assinaturas) {
         this.users = users;
         this.merchants = merchants;
         this.staffRepository = staffRepository;
         this.codificador = codificador;
         this.auditLogs = auditLogs;
+        this.assinaturas = assinaturas;
     }
 
     @Transactional
     public RespostaFuncionarioCriado create(Usuario current, SolicitacaoCriacaoFuncionario request) {
+        assinaturas.exigirAcessoOperacional(current);
         Comerciante owner = owner(current);
         if (users.existsByEmailIgnoreCase(request.email()))
             throw new ExcecaoApi(HttpStatus.CONFLICT, "E-mail já cadastrado");
@@ -67,12 +71,14 @@ public class ServicoFuncionario {
 
     @Transactional(readOnly = true)
     public List<RespostaFuncionario> list(Usuario current) {
+        assinaturas.exigirAcessoOperacional(current);
         Comerciante owner = owner(current);
         return staffRepository.findByResponsavelIdOrderByNameAsc(owner.getId()).stream().map(this::map).toList();
     }
 
     @Transactional
     public RespostaFuncionario changeStatus(Usuario current, UUID id, SolicitacaoStatusFuncionario request) {
+        assinaturas.exigirAcessoOperacional(current);
         Comerciante owner = owner(current);
         var employee = findOwned(owner, id);
         employee.setEnabled(request.ativo());
@@ -84,6 +90,7 @@ public class ServicoFuncionario {
 
     @Transactional
     public RespostaSenhaFuncionario resetSenha(Usuario current, UUID id) {
+        assinaturas.exigirAcessoOperacional(current);
         Comerciante owner = owner(current);
         var employee = findOwned(owner, id);
         String senha = senhaTemporaria();
@@ -98,6 +105,7 @@ public class ServicoFuncionario {
 
     @Transactional
     public void delete(Usuario current, UUID id) {
+        assinaturas.exigirAcessoOperacional(current);
         Comerciante owner = owner(current);
         var employee = findOwned(owner, id);
         auditLogs.save(RegistroAuditoria.of(owner, "DELETE_STAFF", "FuncionarioComercio", employee.getId(),

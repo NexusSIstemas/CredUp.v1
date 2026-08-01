@@ -55,7 +55,7 @@ export function PaginaAutenticacao({ onAuth }: { onAuth: (session: Sessao) => vo
           method: 'POST',
           body: JSON.stringify(data)
         })
-        await mostrarAlerta(response.mensagem, 'sucesso')
+        mostrarAlerta(response.mensagem, 'sucesso')
         return
       }
       const session = await api<Sessao>(register ? '/auth/register' : '/auth/login', {
@@ -64,7 +64,7 @@ export function PaginaAutenticacao({ onAuth }: { onAuth: (session: Sessao) => vo
       })
       onAuth(session)
     } catch (e) {
-      await mostrarAlerta(
+      mostrarAlerta(
         e instanceof Error ? e.message : 'Erro inesperado',
         'erro'
       )

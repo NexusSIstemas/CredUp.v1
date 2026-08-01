@@ -12,10 +12,10 @@ const configuracoes = {
 export function mostrarAlerta(
   texto: string,
   tom: TomAlerta = 'informacao'
-) {
+): void {
   const configuracao = configuracoes[tom]
 
-  return Swal.fire({
+  void Swal.fire({
     toast: true,
     position: 'top-end',
     title: texto,
