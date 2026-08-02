@@ -298,6 +298,11 @@ td { padding:.9rem .75rem; border-bottom:1px solid #f0f2f1; font-size:.9rem; }
 .filtros-assinaturas { display:grid; grid-template-columns:minmax(220px,1fr) minmax(180px,.6fr); gap:.6rem; width:min(520px,100%); }
 .filtros-assinaturas label,.filtros-assinaturas input,.filtros-assinaturas select { margin:0; }
 .estatisticas-assinaturas { margin-bottom:1rem; }
+.cobranca-pix { display:grid; gap:.7rem; margin-top:1rem; padding:1rem; border:1px solid #cbded2; border-radius:14px; background:#f7fbf8; }
+.cobranca-pix img { width:min(260px,100%); border-radius:10px; background:#fff; }
+.cobranca-pix textarea { min-height:90px; resize:none; overflow-wrap:anywhere; }
+.status-pix { color:#8a650d; font-weight:700; }
+.status-pix.pago { color:#17633f; }
 @media (max-width:900px) {
   .estrutura-autenticacao { grid-template-columns:1fr; }
   .apresentacao-autenticacao { min-height:360px; padding:2rem; }

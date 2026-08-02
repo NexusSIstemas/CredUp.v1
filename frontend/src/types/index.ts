@@ -22,6 +22,25 @@ export interface Assinatura {
   podeSolicitarAtivacao: boolean
 }
 
+export interface CobrancaPix {
+  valor: number
+  txid: string
+  nomeRecebedor: string
+  pixCopiaECola: string
+  qrCodeBase64: string
+  geradoEm: string
+  status: string
+  expiracaoSegundos: number
+  avisoConfirmacao: string
+}
+
+export interface StatusCobrancaPix {
+  txid: string
+  status: string
+  pago: boolean
+  confirmadoEm: string | null
+}
+
 export interface Sessao {
   token: string
   idUsuario: string

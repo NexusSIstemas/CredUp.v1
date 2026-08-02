@@ -6,7 +6,7 @@ import {
   type TomAlerta
 } from '../services/alertas'
 import { CampoFlutuante } from '../components/CampoFlutuante'
-import type { Assinatura, Comercio, StatusComercio, Divida, StatusDivida, Funcionario, Pagina, SolicitacaoRedefinicaoSenha, Perfil, PerfilAcesso, RegistroAuditoria, Sessao } from '../types'
+import type { Assinatura, CobrancaPix, StatusCobrancaPix, Comercio, StatusComercio, Divida, StatusDivida, Funcionario, Pagina, SolicitacaoRedefinicaoSenha, Perfil, PerfilAcesso, RegistroAuditoria, Sessao } from '../types'
 
 type Secao = 'overview' | 'commerces' | 'defaults' | 'staff' | 'recovery' | 'auditoria' | 'assinatura' | 'perfil'
 
@@ -168,6 +168,8 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   const [subscriptionQuery, setBuscaAssinatura] = useState('')
   const [subscriptionStatus, setStatusAssinatura] = useState('TODAS')
   const [subscriptionLoaded, setAssinaturaCarregada] = useState(false)
+  const [pixCharge, setCobrancaPix] = useState<CobrancaPix | null>(null)
+  const [pixLoading, setPixCarregando] = useState(false)
   const admin = sessao.perfilAcesso === 'ADMIN_REDE'
   const owner = sessao.perfilAcesso === 'MERCHANT_OWNER'
   const staff = sessao.perfilAcesso === 'MERCHANT_STAFF'
@@ -247,6 +249,24 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
     return () => window.clearInterval(interval)
   }, [admin, section])
 
+  useEffect(() => {
+    if (!pixCharge || pixCharge.status === 'CONCLUIDA') return
+    const interval = window.setInterval(async () => {
+      try {
+        const status = await api<StatusCobrancaPix>(`/assinaturas/minha/cobranca-pix/${pixCharge.txid}`)
+        setCobrancaPix(atual => atual ? { ...atual, status: status.status } : atual)
+        if (status.pago) {
+          window.clearInterval(interval)
+          showAlert('Pagamento confirmado. Sua assinatura foi ativada.', 'sucesso')
+          loadSubscription()
+        }
+      } catch {
+        // Uma falha temporária não interrompe a tela nem duplica a cobrança.
+      }
+    }, 5_000)
+    return () => window.clearInterval(interval)
+  }, [pixCharge?.txid, pixCharge?.status])
+
   function openSecao(next: Secao) {
     if (!admin && subscriptionLoaded && !subscription?.acessoOperacional
       && ['defaults', 'staff'].includes(next)) {
@@ -283,6 +303,19 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
       setAssinatura(updated)
       showAlert('Solicitação enviada ao administrador.', 'sucesso')
     } catch (erro) { showError(erro) }
+  }
+
+  async function generatePixCharge() {
+    setPixCarregando(true)
+    try {
+      const charge = await api<CobrancaPix>('/assinaturas/minha/cobranca-pix', { method: 'POST' })
+      setCobrancaPix(charge)
+      showAlert('Cobrança Pix criada com segurança.', 'sucesso')
+    } catch (erro) {
+      showError(erro)
+    } finally {
+      setPixCarregando(false)
+    }
   }
 
   async function changeSubscription(id: string, action: 'ativar' | 'renovar' | 'cancelar') {
@@ -709,7 +742,16 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
             <div><dt>Fim do teste</dt><dd>{subscription.fimTeste ? new Date(`${subscription.fimTeste}T12:00:00`).toLocaleDateString('pt-BR') : '-'}</dd></div>
             <div><dt>Relatórios PDF</dt><dd>{subscription.podeGerarRelatorio ? 'Liberados' : 'Plano profissional'}</dd></div>
           </dl>
-          {owner && subscription.podeSolicitarAtivacao && <button onClick={requestSubscriptionActivation}>Solicitar plano profissional</button>}
+          {owner && subscription.status !== 'AGUARDANDO_APROVACAO' && subscription.status !== 'ATIVA' && <button disabled={pixLoading} onClick={generatePixCharge}>{pixLoading ? 'Gerando cobrança...' : 'Pagar assinatura com Pix'}</button>}
+          {pixCharge && <div className="cobranca-pix animar-entrada">
+            <h3>Pix de {pixCharge.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</h3>
+            <img src={pixCharge.qrCodeBase64} alt="QR Code da cobrança Pix" />
+            <label>Pix Copia e Cola</label>
+            <textarea readOnly value={pixCharge.pixCopiaECola} />
+            <button className="pequeno" onClick={() => { void navigator.clipboard.writeText(pixCharge.pixCopiaECola); showAlert('Pix Copia e Cola copiado.', 'sucesso') }}>Copiar código Pix</button>
+            <p className={`status-pix ${pixCharge.status === 'CONCLUIDA' ? 'pago' : ''}`}>{pixCharge.status === 'CONCLUIDA' ? 'Pagamento confirmado' : 'Aguardando confirmação do Banco do Brasil...'}</p>
+            <small>{pixCharge.avisoConfirmacao}</small>
+          </div>}
           {subscription.solicitacaoAtivacaoEm && <p className="solicitacao-enviada">Solicitação enviada. Aguarde a análise do administrador.</p>}
         </section>}
         {admin && <>
