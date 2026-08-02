@@ -24,6 +24,12 @@ services:
       JWT_SECRET: ${JWT_SECRET:-local-development-secret-change-before-production-123}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@credup.local}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-me-now}
+      BB_PIX_AMBIENTE: ${BB_PIX_AMBIENTE:-sandbox}
+      BB_PIX_APP_KEY: ${BB_PIX_APP_KEY:-}
+      BB_PIX_CLIENT_ID: ${BB_PIX_CLIENT_ID:-}
+      BB_PIX_CLIENT_SECRET: ${BB_PIX_CLIENT_SECRET:-}
+      BB_PIX_CHAVE: ${BB_PIX_CHAVE:-}
+      PIX_VALOR_MENSAL: ${PIX_VALOR_MENSAL:-99.90}
       CORS_ALLOWED_ORIGIN: http://localhost:5173
     ports:
       - "8080:8080"

@@ -22,3 +22,12 @@ app:
     expiration-minutes: ${JWT_EXPIRATION_MINUTES:480}
   cors:
     allowed-origin: ${CORS_ALLOWED_ORIGIN:http://localhost:5173}
+  pix:
+    bb:
+      ambiente: ${BB_PIX_AMBIENTE:sandbox}
+      app-key: ${BB_PIX_APP_KEY:}
+      client-id: ${BB_PIX_CLIENT_ID:}
+      client-secret: ${BB_PIX_CLIENT_SECRET:}
+      chave: ${BB_PIX_CHAVE:}
+      valor-mensal: ${PIX_VALOR_MENSAL:99.90}
+      expiracao-segundos: ${BB_PIX_EXPIRACAO_SEGUNDOS:3600}
