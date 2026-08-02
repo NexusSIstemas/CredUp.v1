@@ -10,11 +10,20 @@ concurrency:
   group: producao
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   publicar:
     name: Publicar em produção
     runs-on: ubuntu-latest
     environment: production
+    timeout-minutes: 20
+    env:
+      HOST: 70.38.101.135
+      PORTA: "22"
+      USUARIO: root
+      DIRETORIO: /opt/credup
 
     steps:
       - name: Baixar o código
@@ -23,17 +32,22 @@ jobs:
       - name: Preparar acesso SSH
         env:
           CHAVE_SSH: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
-          HOST_CONHECIDO: ${{ secrets.VPS_KNOWN_HOSTS }}
         run: |
+          if [ -z "$CHAVE_SSH" ]; then
+            echo "::error::Cadastre VPS_SSH_PRIVATE_KEY nos segredos do ambiente production."
+            exit 1
+          fi
+
           install -m 700 -d "$HOME/.ssh"
           printf '%s\n' "$CHAVE_SSH" > "$HOME/.ssh/credup_deploy"
           chmod 600 "$HOME/.ssh/credup_deploy"
-          printf '%s\n' "$HOST_CONHECIDO" > "$HOME/.ssh/known_hosts"
+          ssh-keygen -y -f "$HOME/.ssh/credup_deploy" >/dev/null
+          printf '%s\n' \
+            '70.38.101.135 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIO1dPDEoCC3GuCuNta9PWpGNxoUTXIvxsma/fpGQFJx' \
+            > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/known_hosts"
 
       - name: Validar diretório da VPS
-        env:
-          DIRETORIO: ${{ secrets.VPS_DEPLOY_PATH || '/opt/credup' }}
         run: |
           case "$DIRETORIO" in
             /opt/*|/srv/*) ;;
@@ -43,14 +57,23 @@ jobs:
               ;;
           esac
 
-      - name: Enviar arquivos para a VPS
-        env:
-          HOST: ${{ secrets.VPS_HOST }}
-          PORTA: ${{ secrets.VPS_PORT }}
-          USUARIO: ${{ secrets.VPS_USER }}
-          DIRETORIO: ${{ secrets.VPS_DEPLOY_PATH || '/opt/credup' }}
+      - name: Gerar backup antes da publicação
         run: |
           ssh \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o ConnectTimeout=15 \
+            -i "$HOME/.ssh/credup_deploy" \
+            -p "$PORTA" \
+            "$USUARIO@$HOST" \
+            "cd '$DIRETORIO' && ./scripts/backup-postgres.sh"
+
+      - name: Enviar arquivos para a VPS
+        run: |
+          ssh \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o ConnectTimeout=15 \
             -i "$HOME/.ssh/credup_deploy" \
             -p "$PORTA" \
             "$USUARIO@$HOST" \
@@ -64,21 +87,21 @@ jobs:
             --exclude='.github/' \
             --exclude='.env' \
             --exclude='.env.production' \
+            --exclude='backups/' \
+            --exclude='backup.log' \
             --exclude='node_modules/' \
             --exclude='target/' \
             --exclude='dist/' \
-            -e "ssh -i $HOME/.ssh/credup_deploy -p $PORTA" \
+            -e "ssh -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=15 -i $HOME/.ssh/credup_deploy -p $PORTA" \
             ./ \
             "$USUARIO@$HOST:$DIRETORIO/"
 
       - name: Executar publicação
-        env:
-          HOST: ${{ secrets.VPS_HOST }}
-          PORTA: ${{ secrets.VPS_PORT }}
-          USUARIO: ${{ secrets.VPS_USER }}
-          DIRETORIO: ${{ secrets.VPS_DEPLOY_PATH || '/opt/credup' }}
         run: |
           ssh \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o ConnectTimeout=15 \
             -i "$HOME/.ssh/credup_deploy" \
             -p "$PORTA" \
             "$USUARIO@$HOST" \
@@ -104,3 +127,8 @@ jobs:
 
           echo "A aplicação não respondeu dentro do tempo esperado."
           exit 1
+
+      - name: Remover credencial temporária
+        if: always()
+        run: |
+          rm -f "$HOME/.ssh/credup_deploy"
