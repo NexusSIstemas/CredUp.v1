@@ -12,9 +12,28 @@ import java.util.*;
 @RequestMapping("/api/assinaturas")
 public class ControladorAssinatura {
     private final ServicoAssinatura servico;
+    private final br.com.credup.billing.application.ServicoCobrancaPix cobrancasPix;
 
-    public ControladorAssinatura(ServicoAssinatura servico) {
+    public ControladorAssinatura(
+            ServicoAssinatura servico,
+            br.com.credup.billing.application.ServicoCobrancaPix cobrancasPix) {
         this.servico = servico;
+        this.cobrancasPix = cobrancasPix;
+    }
+
+    @PostMapping("/minha/cobranca-pix")
+    @PreAuthorize("hasRole('MERCHANT_OWNER')")
+    DtosPix.RespostaCobrancaPix gerarCobrancaPix(
+            @AuthenticationPrincipal Usuario usuario) {
+        return cobrancasPix.gerar(usuario);
+    }
+
+    @GetMapping("/minha/cobranca-pix/{txid}")
+    @PreAuthorize("hasRole('MERCHANT_OWNER')")
+    DtosPix.RespostaStatusPix consultarCobrancaPix(
+            @AuthenticationPrincipal Usuario usuario,
+            @PathVariable String txid) {
+        return cobrancasPix.consultar(usuario, txid);
     }
 
     @GetMapping("/minha")

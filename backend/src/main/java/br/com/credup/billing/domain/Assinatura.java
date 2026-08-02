@@ -4,6 +4,7 @@ import br.com.credup.identity.domain.Comerciante;
 import br.com.credup.shared.domain.EntidadeBase;
 import jakarta.persistence.*;
 import java.time.*;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "assinaturas")
@@ -37,6 +38,21 @@ public class Assinatura extends EntidadeBase {
 
     @Column(name = "cancelada_em")
     private Instant canceladaEm;
+
+    @Column(name = "pix_txid", unique = true, length = 35)
+    private String pixTxid;
+
+    @Column(name = "pix_status", length = 30)
+    private String pixStatus;
+
+    @Column(name = "pix_valor", precision = 12, scale = 2)
+    private BigDecimal pixValor;
+
+    @Column(name = "pix_criado_em")
+    private Instant pixCriadoEm;
+
+    @Column(name = "pix_pago_em")
+    private Instant pixPagoEm;
 
     public Comerciante getComerciante() {
         return comerciante;
@@ -109,4 +125,15 @@ public class Assinatura extends EntidadeBase {
     public void setCanceladaEm(Instant canceladaEm) {
         this.canceladaEm = canceladaEm;
     }
+
+    public String getPixTxid() { return pixTxid; }
+    public void setPixTxid(String pixTxid) { this.pixTxid = pixTxid; }
+    public String getPixStatus() { return pixStatus; }
+    public void setPixStatus(String pixStatus) { this.pixStatus = pixStatus; }
+    public BigDecimal getPixValor() { return pixValor; }
+    public void setPixValor(BigDecimal pixValor) { this.pixValor = pixValor; }
+    public Instant getPixCriadoEm() { return pixCriadoEm; }
+    public void setPixCriadoEm(Instant pixCriadoEm) { this.pixCriadoEm = pixCriadoEm; }
+    public Instant getPixPagoEm() { return pixPagoEm; }
+    public void setPixPagoEm(Instant pixPagoEm) { this.pixPagoEm = pixPagoEm; }
 }

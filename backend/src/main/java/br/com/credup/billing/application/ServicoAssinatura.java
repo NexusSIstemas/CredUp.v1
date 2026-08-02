@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.*;
+import java.math.BigDecimal;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
@@ -94,6 +95,82 @@ public class ServicoAssinatura {
                 usuario.getName() + " " + usuario.getSurname(),
                 "Solicitou a ativação do plano profissional"));
         return mapear(assinatura);
+    }
+
+    @Transactional
+    public Assinatura registrarCobrancaPix(
+            Usuario usuario,
+            String txid,
+            BigDecimal valor) {
+        if (usuario.getPerfilAcesso() != PerfilAcesso.MERCHANT_OWNER) {
+            throw new ExcecaoApi(HttpStatus.FORBIDDEN, "Somente o dono pode gerar a cobrança Pix");
+        }
+        var assinatura = obterDoUsuario(usuario);
+        atualizarStatus(assinatura);
+        if (assinatura.getStatus() == StatusAssinatura.AGUARDANDO_APROVACAO) {
+            throw new ExcecaoApi(
+                    HttpStatus.FORBIDDEN,
+                    "A cobrança estará disponível após a aprovação do primeiro comércio");
+        }
+        assinatura.setPixTxid(txid);
+        assinatura.setPixStatus("ATIVA");
+        assinatura.setPixValor(valor);
+        assinatura.setPixCriadoEm(Instant.now());
+        assinatura.setPixPagoEm(null);
+        assinatura.setSolicitacaoAtivacaoEm(Instant.now());
+        auditoria.save(RegistroAuditoria.of(
+                usuario,
+                "GERAR_COBRANCA_PIX",
+                "Assinatura",
+                assinatura.getId(),
+                nomeComerciante(assinatura),
+                "Gerou cobrança Pix para o plano profissional"));
+        return assinatura;
+    }
+
+    @Transactional(readOnly = true)
+    public Assinatura validarCobrancaDoUsuario(Usuario usuario, String txid) {
+        var assinatura = obterDoUsuario(usuario);
+        if (!Objects.equals(assinatura.getPixTxid(), txid)) {
+            throw new ExcecaoApi(HttpStatus.NOT_FOUND, "Cobrança Pix não encontrada");
+        }
+        return assinatura;
+    }
+
+    @Transactional
+    public Instant confirmarPagamentoPix(Usuario usuario, String txid) {
+        var assinatura = obterDoUsuario(usuario);
+        if (!Objects.equals(assinatura.getPixTxid(), txid)) {
+            throw new ExcecaoApi(HttpStatus.NOT_FOUND, "Cobrança Pix não encontrada");
+        }
+        if (assinatura.getPixPagoEm() != null) {
+            return assinatura.getPixPagoEm();
+        }
+
+        var hoje = LocalDate.now();
+        var baseRenovacao = assinatura.getProximaCobranca() != null
+                && assinatura.getProximaCobranca().isAfter(hoje)
+                        ? assinatura.getProximaCobranca()
+                        : hoje;
+        var confirmadoEm = Instant.now();
+        assinatura.setPlano(PlanoAssinatura.PROFISSIONAL);
+        assinatura.setStatus(StatusAssinatura.ATIVA);
+        if (assinatura.getInicioAssinatura() == null) {
+            assinatura.setInicioAssinatura(hoje);
+        }
+        assinatura.setProximaCobranca(baseRenovacao.plusDays(DIAS_PLANO_MENSAL));
+        assinatura.setSolicitacaoAtivacaoEm(null);
+        assinatura.setCanceladaEm(null);
+        assinatura.setPixStatus("CONCLUIDA");
+        assinatura.setPixPagoEm(confirmadoEm);
+        auditoria.save(RegistroAuditoria.of(
+                usuario,
+                "CONFIRMAR_PAGAMENTO_PIX",
+                "Assinatura",
+                assinatura.getId(),
+                nomeComerciante(assinatura),
+                "Pagamento Pix confirmado pelo Banco do Brasil; assinatura ativada por 30 dias"));
+        return confirmadoEm;
     }
 
     @Transactional
