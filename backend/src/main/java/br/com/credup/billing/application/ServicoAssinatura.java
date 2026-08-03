@@ -10,6 +10,7 @@ import br.com.credup.shared.domain.PerfilAcesso;
 import br.com.credup.shared.exception.ExcecaoApi;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.*;
 import java.math.BigDecimal;
@@ -69,32 +70,6 @@ public class ServicoAssinatura {
                 .peek(this::atualizarStatus)
                 .map(this::mapear)
                 .toList();
-    }
-
-    @Transactional
-    public RespostaAssinatura solicitarAtivacao(Usuario usuario) {
-        if (usuario.getPerfilAcesso() != PerfilAcesso.MERCHANT_OWNER) {
-            throw new ExcecaoApi(
-                    HttpStatus.FORBIDDEN,
-                    "Somente o dono pode solicitar a ativação da assinatura");
-        }
-        var assinatura = obterDoUsuario(usuario);
-        atualizarStatus(assinatura);
-        if (assinatura.getStatus() == StatusAssinatura.ATIVA) {
-            throw new ExcecaoApi(HttpStatus.CONFLICT, "A assinatura já está ativa");
-        }
-        if (assinatura.getSolicitacaoAtivacaoEm() != null) {
-            throw new ExcecaoApi(HttpStatus.CONFLICT, "A ativação já foi solicitada");
-        }
-        assinatura.setSolicitacaoAtivacaoEm(Instant.now());
-        auditoria.save(RegistroAuditoria.of(
-                usuario,
-                "SOLICITAR_ATIVACAO_ASSINATURA",
-                "Assinatura",
-                assinatura.getId(),
-                usuario.getName() + " " + usuario.getSurname(),
-                "Solicitou a ativação do plano profissional"));
-        return mapear(assinatura);
     }
 
     @Transactional
@@ -174,54 +149,6 @@ public class ServicoAssinatura {
     }
 
     @Transactional
-    public RespostaAssinatura ativar(Usuario administrador, UUID id) {
-        var assinatura = obter(id);
-        var hoje = LocalDate.now();
-        assinatura.setPlano(PlanoAssinatura.PROFISSIONAL);
-        assinatura.setStatus(StatusAssinatura.ATIVA);
-        if (assinatura.getInicioAssinatura() == null) {
-            assinatura.setInicioAssinatura(hoje);
-        }
-        assinatura.setProximaCobranca(hoje.plusDays(DIAS_PLANO_MENSAL));
-        assinatura.setSolicitacaoAtivacaoEm(null);
-        assinatura.setCanceladaEm(null);
-        auditoria.save(RegistroAuditoria.of(
-                administrador,
-                "ATIVAR_ASSINATURA",
-                "Assinatura",
-                assinatura.getId(),
-                nomeComerciante(assinatura),
-                "Ativou o plano profissional por 30 dias"));
-        return mapear(assinatura);
-    }
-
-    @Transactional
-    public RespostaAssinatura renovar(Usuario administrador, UUID id) {
-        var assinatura = obter(id);
-        var hoje = LocalDate.now();
-        var baseRenovacao = assinatura.getProximaCobranca() != null
-                && assinatura.getProximaCobranca().isAfter(hoje)
-                        ? assinatura.getProximaCobranca()
-                        : hoje;
-        assinatura.setPlano(PlanoAssinatura.PROFISSIONAL);
-        assinatura.setStatus(StatusAssinatura.ATIVA);
-        if (assinatura.getInicioAssinatura() == null) {
-            assinatura.setInicioAssinatura(hoje);
-        }
-        assinatura.setProximaCobranca(baseRenovacao.plusDays(DIAS_PLANO_MENSAL));
-        assinatura.setSolicitacaoAtivacaoEm(null);
-        assinatura.setCanceladaEm(null);
-        auditoria.save(RegistroAuditoria.of(
-                administrador,
-                "RENOVAR_ASSINATURA",
-                "Assinatura",
-                assinatura.getId(),
-                nomeComerciante(assinatura),
-                "Renovou o plano profissional por mais 30 dias"));
-        return mapear(assinatura);
-    }
-
-    @Transactional
     public RespostaAssinatura cancelar(Usuario administrador, UUID id) {
         var assinatura = obter(id);
         assinatura.setStatus(StatusAssinatura.CANCELADA);
@@ -279,6 +206,12 @@ public class ServicoAssinatura {
                     HttpStatus.FORBIDDEN,
                     "Relatórios em PDF estão disponíveis somente no plano pago");
         }
+    }
+
+    @Scheduled(cron = "0 0 * * * *", zone = "America/Sao_Paulo")
+    @Transactional
+    public void atualizarAssinaturasVencidas() {
+        assinaturas.findAll().forEach(this::atualizarStatus);
     }
 
     private Assinatura obterDoUsuario(Usuario usuario) {
