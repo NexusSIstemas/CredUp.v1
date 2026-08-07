@@ -42,32 +42,10 @@ public class ControladorAssinatura {
         return servico.minha(usuario);
     }
 
-    @PostMapping("/minha/solicitar-ativacao")
-    @PreAuthorize("hasRole('MERCHANT_OWNER')")
-    RespostaAssinatura solicitar(@AuthenticationPrincipal Usuario usuario) {
-        return servico.solicitarAtivacao(usuario);
-    }
-
     @GetMapping
     @PreAuthorize("hasRole('ADMIN_REDE')")
     List<RespostaAssinatura> listar() {
         return servico.listarTodas();
-    }
-
-    @PatchMapping("/{id}/ativar")
-    @PreAuthorize("hasRole('ADMIN_REDE')")
-    RespostaAssinatura ativar(
-            @AuthenticationPrincipal Usuario administrador,
-            @PathVariable UUID id) {
-        return servico.ativar(administrador, id);
-    }
-
-    @PatchMapping("/{id}/renovar")
-    @PreAuthorize("hasRole('ADMIN_REDE')")
-    RespostaAssinatura renovar(
-            @AuthenticationPrincipal Usuario administrador,
-            @PathVariable UUID id) {
-        return servico.renovar(administrador, id);
     }
 
     @PatchMapping("/{id}/cancelar")

@@ -297,14 +297,6 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
     if (next === 'assinatura') admin ? loadSubscriptions() : loadSubscription()
   }
 
-  async function requestSubscriptionActivation() {
-    try {
-      const updated = await api<Assinatura>('/assinaturas/minha/solicitar-ativacao', { method: 'POST' })
-      setAssinatura(updated)
-      showAlert('Solicitação enviada ao administrador.', 'sucesso')
-    } catch (erro) { showError(erro) }
-  }
-
   async function generatePixCharge() {
     setPixCarregando(true)
     try {
@@ -318,15 +310,10 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
     }
   }
 
-  async function changeSubscription(id: string, action: 'ativar' | 'renovar' | 'cancelar') {
+  async function cancelSubscription(id: string) {
     try {
-      await api(`/assinaturas/${id}/${action}`, { method: 'PATCH' })
-      const messages = {
-        ativar: 'Assinatura ativada.',
-        renovar: 'Assinatura renovada por mais 30 dias.',
-        cancelar: 'Assinatura cancelada.'
-      }
-      showAlert(messages[action], 'sucesso')
+      await api(`/assinaturas/${id}/cancelar`, { method: 'PATCH' })
+      showAlert('Assinatura cancelada.', 'sucesso')
       loadSubscriptions()
     } catch (erro) { showError(erro) }
   }
@@ -742,7 +729,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
             <div><dt>Fim do teste</dt><dd>{subscription.fimTeste ? new Date(`${subscription.fimTeste}T12:00:00`).toLocaleDateString('pt-BR') : '-'}</dd></div>
             <div><dt>Relatórios PDF</dt><dd>{subscription.podeGerarRelatorio ? 'Liberados' : 'Plano profissional'}</dd></div>
           </dl>
-          {owner && subscription.status !== 'AGUARDANDO_APROVACAO' && subscription.status !== 'ATIVA' && <button disabled={pixLoading} onClick={generatePixCharge}>{pixLoading ? 'Gerando cobrança...' : 'Pagar assinatura com Pix'}</button>}
+          {owner && ['EXPIRADA', 'ATRASADA', 'CANCELADA'].includes(subscription.status) && <button disabled={pixLoading} onClick={generatePixCharge}>{pixLoading ? 'Gerando cobrança...' : 'Pagar assinatura com Pix'}</button>}
           {pixCharge && <div className="cobranca-pix animar-entrada">
             <h3>Pix de {pixCharge.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</h3>
             <img src={pixCharge.qrCodeBase64} alt="QR Code da cobrança Pix" />
@@ -771,7 +758,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
               <div><strong>{item.nomeComerciante}</strong><small>{item.emailMascarado}</small>{item.solicitacaoAtivacaoEm && <b>Solicitou ativação em {new Date(item.solicitacaoAtivacaoEm).toLocaleString('pt-BR')}</b>}</div>
               <span className={`indicador ${item.acessoOperacional ? 'aprovado' : 'rejeitado'}`}>{subscriptionStatusLabels[item.status]}</span>
               <div className="datas-assinatura"><small>{item.plano === 'PROFISSIONAL' ? 'Plano profissional' : `Teste · ${item.diasRestantes} dia(s)`}</small><small>Fim do teste: {item.fimTeste ? new Date(`${item.fimTeste}T12:00:00`).toLocaleDateString('pt-BR') : '-'}</small><small>Próxima cobrança: {item.proximaCobranca ? new Date(`${item.proximaCobranca}T12:00:00`).toLocaleDateString('pt-BR') : '-'}</small></div>
-              <div className="acoes-assinatura">{item.status === 'ATIVA' ? <button className="pequeno" onClick={() => changeSubscription(item.id, 'renovar')}>Renovar +30 dias</button> : <button className="pequeno" onClick={() => changeSubscription(item.id, 'ativar')}>Ativar por 30 dias</button>}<button className="pequeno perigo" disabled={item.status === 'CANCELADA'} onClick={() => changeSubscription(item.id, 'cancelar')}>Cancelar</button></div>
+              <div className="acoes-assinatura"><button className="pequeno perigo" disabled={item.status === 'CANCELADA'} onClick={() => cancelSubscription(item.id)}>Cancelar</button></div>
             </article>)}{!filteredSubscriptions.length && <p className="vazio">Nenhuma assinatura encontrada com esses filtros.</p>}</div>
           </section>
         </>}
