@@ -72,7 +72,7 @@ public class ServicoComercio {
         var commerce = get(id);
         commerce.setStatus(request.status());
         if (request.status() == StatusComercio.APPROVED) {
-            assinaturas.iniciarTeste(commerce.getComerciante());
+            assinaturas.liberarPagamento(commerce.getComerciante());
         }
         registrosAuditoria.save(RegistroAuditoria.of(current, "REVISAR_COMERCIO", "Comercio", commerce.getId(),
                 commerce.getComercioName(), "Alterou a situação do comércio para " + request.status()));

@@ -14,12 +14,10 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.*;
 import java.math.BigDecimal;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 @Service
 public class ServicoAssinatura {
-    public static final int DIAS_TESTE = 30;
     public static final int DIAS_PLANO_MENSAL = 30;
 
     private final RepositorioAssinatura assinaturas;
@@ -39,22 +37,19 @@ public class ServicoAssinatura {
         }
         var assinatura = new Assinatura();
         assinatura.setComerciante(comerciante);
-        assinatura.setPlano(PlanoAssinatura.TESTE);
+        assinatura.setPlano(PlanoAssinatura.PROFISSIONAL);
         assinatura.setStatus(StatusAssinatura.AGUARDANDO_APROVACAO);
         assinaturas.save(assinatura);
     }
 
     @Transactional
-    public void iniciarTeste(Comerciante comerciante) {
+    public void liberarPagamento(Comerciante comerciante) {
         var assinatura = obterPorComerciante(comerciante);
         if (assinatura.getStatus() != StatusAssinatura.AGUARDANDO_APROVACAO) {
             return;
         }
-        var hoje = LocalDate.now();
-        assinatura.setPlano(PlanoAssinatura.TESTE);
-        assinatura.setStatus(StatusAssinatura.EM_TESTE);
-        assinatura.setInicioTeste(hoje);
-        assinatura.setFimTeste(hoje.plusDays(DIAS_TESTE));
+        assinatura.setPlano(PlanoAssinatura.PROFISSIONAL);
+        assinatura.setStatus(StatusAssinatura.AGUARDANDO_PAGAMENTO);
     }
 
     @Transactional
@@ -186,6 +181,7 @@ public class ServicoAssinatura {
         var assinatura = obterDoUsuario(usuario);
         atualizarStatus(assinatura);
         if (assinatura.getStatus() == StatusAssinatura.EXPIRADA
+                || assinatura.getStatus() == StatusAssinatura.AGUARDANDO_PAGAMENTO
                 || assinatura.getStatus() == StatusAssinatura.ATRASADA
                 || assinatura.getStatus() == StatusAssinatura.CANCELADA) {
             throw new ExcecaoApi(
@@ -231,7 +227,7 @@ public class ServicoAssinatura {
                 .orElseGet(() -> {
                     var assinatura = new Assinatura();
                     assinatura.setComerciante(comerciante);
-                    assinatura.setPlano(PlanoAssinatura.TESTE);
+                    assinatura.setPlano(PlanoAssinatura.PROFISSIONAL);
                     assinatura.setStatus(StatusAssinatura.AGUARDANDO_APROVACAO);
                     return assinaturas.save(assinatura);
                 });
@@ -244,11 +240,6 @@ public class ServicoAssinatura {
 
     private void atualizarStatus(Assinatura assinatura) {
         var hoje = LocalDate.now();
-        if (assinatura.getStatus() == StatusAssinatura.EM_TESTE
-                && assinatura.getFimTeste() != null
-                && !hoje.isBefore(assinatura.getFimTeste())) {
-            assinatura.setStatus(StatusAssinatura.EXPIRADA);
-        }
         if (assinatura.getStatus() == StatusAssinatura.ATIVA
                 && assinatura.getProximaCobranca() != null
                 && hoje.isAfter(assinatura.getProximaCobranca())) {
@@ -257,19 +248,10 @@ public class ServicoAssinatura {
     }
 
     private boolean temAcessoOperacional(Assinatura assinatura) {
-        return assinatura.getStatus() == StatusAssinatura.EM_TESTE
-                || assinatura.getStatus() == StatusAssinatura.ATIVA;
+        return assinatura.getStatus() == StatusAssinatura.ATIVA;
     }
 
     private RespostaAssinatura mapear(Assinatura assinatura) {
-        LocalDate limite = assinatura.getStatus() == StatusAssinatura.EM_TESTE
-                ? assinatura.getFimTeste()
-                : assinatura.getStatus() == StatusAssinatura.ATIVA
-                        ? assinatura.getProximaCobranca()
-                        : null;
-        long diasRestantes = limite == null
-                ? 0
-                : Math.max(0, ChronoUnit.DAYS.between(LocalDate.now(), limite));
         boolean ativa = assinatura.getStatus() == StatusAssinatura.ATIVA;
         return new RespostaAssinatura(
                 assinatura.getId(),
@@ -278,15 +260,11 @@ public class ServicoAssinatura {
                 mascararEmail(assinatura.getComerciante().getEmail()),
                 assinatura.getPlano(),
                 assinatura.getStatus(),
-                assinatura.getInicioTeste(),
-                assinatura.getFimTeste(),
                 assinatura.getInicioAssinatura(),
                 assinatura.getProximaCobranca(),
                 assinatura.getSolicitacaoAtivacaoEm(),
-                diasRestantes,
                 temAcessoOperacional(assinatura),
-                ativa,
-                !ativa && assinatura.getSolicitacaoAtivacaoEm() == null);
+                ativa);
     }
 
     private String nomeComerciante(Assinatura assinatura) {

@@ -15,14 +15,10 @@ public final class DtosAssinatura {
             String emailMascarado,
             PlanoAssinatura plano,
             StatusAssinatura status,
-            LocalDate inicioTeste,
-            LocalDate fimTeste,
             LocalDate inicioAssinatura,
             LocalDate proximaCobranca,
             Instant solicitacaoAtivacaoEm,
-            long diasRestantes,
             boolean acessoOperacional,
-            boolean podeGerarRelatorio,
-            boolean podeSolicitarAtivacao) {
+            boolean podeGerarRelatorio) {
     }
 }

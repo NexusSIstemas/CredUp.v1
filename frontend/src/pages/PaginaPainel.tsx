@@ -53,7 +53,7 @@ const actionLabels: Record<string, string> = {
 
 const subscriptionStatusLabels = {
   AGUARDANDO_APROVACAO: 'Aguardando aprovação',
-  EM_TESTE: 'Período de teste',
+  AGUARDANDO_PAGAMENTO: 'Aguardando pagamento',
   ATIVA: 'Ativa',
   ATRASADA: 'Pagamento pendente',
   EXPIRADA: 'Teste encerrado',
@@ -599,9 +599,9 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
         </div>
       </header>
 
-      {!admin && subscription && <div className={`faixa-assinatura ${subscription.status === 'ATIVA' || subscription.diasRestantes > 7 ? 'verde' : subscription.diasRestantes >= 3 ? 'amarela' : 'vermelha'}`}>
+      {!admin && subscription && <div className={`faixa-assinatura ${subscription.status === 'ATIVA' ? 'verde' : subscription.status === 'AGUARDANDO_APROVACAO' ? 'amarela' : 'vermelha'}`}>
         <span className="semaforo-assinatura" />
-        <div><strong>{subscriptionStatusLabels[subscription.status]}</strong><small>{subscription.status === 'EM_TESTE' ? `${subscription.diasRestantes} dia(s) restantes no teste gratuito` : subscription.status === 'ATIVA' ? `Próxima renovação em ${subscription.proximaCobranca ? new Date(`${subscription.proximaCobranca}T12:00:00`).toLocaleDateString('pt-BR') : '-'}` : 'Consulte os detalhes da sua assinatura'}</small></div>
+        <div><strong>{subscriptionStatusLabels[subscription.status]}</strong><small>{subscription.status === 'ATIVA' ? `Próxima renovação em ${subscription.proximaCobranca ? new Date(`${subscription.proximaCobranca}T12:00:00`).toLocaleDateString('pt-BR') : '-'}` : 'Consulte os detalhes da sua assinatura'}</small></div>
         <button className="pequeno" onClick={() => openSecao('assinatura')}>Ver assinatura</button>
       </div>}
 
@@ -630,11 +630,11 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
               <div className="informacoes-mercado"><strong>{commerce.nomeComercio}</strong><small className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? displayCnpj(commerce.cnpj) : '**.***.***/****-**'}</small></div>
               <span className={`indicador ${classesStatusComercio[commerce.status]}`}>{commerceStatusLabels[commerce.status]}</span>
               {admin && commerce.status === 'PENDING' && <div className="acoes-mercado"><button className="pequeno" onClick={() => review(commerce.id, 'APPROVED')}>Aprovar</button><button className="pequeno perigo" onClick={() => review(commerce.id, 'REJECTED')}>Reprovar</button></div>}
-              {owner && <div className="acoes-mercado"><button className="pequeno" onClick={() => setEditingCommerce(commerce)}>Editar dados</button><button className="pequeno perigo" onClick={() => deleteComercio(commerce)}>Excluir</button></div>}
+              {owner && subscription?.acessoOperacional && <div className="acoes-mercado"><button className="pequeno" onClick={() => setEditingCommerce(commerce)}>Editar dados</button><button className="pequeno perigo" onClick={() => deleteComercio(commerce)}>Excluir</button></div>}
             </article>)}
             {!commerces.length && <p className="vazio">Nenhum comércio cadastrado.</p>}</div>
           </section>
-          {owner && editingCommerce && <section className="painel-conteudo painel-fixo"><h2>Editar comércio</h2>
+          {owner && subscription?.acessoOperacional && editingCommerce && <section className="painel-conteudo painel-fixo"><h2>Editar comércio</h2>
             <form onSubmit={updateComercio} className="formulario-compacto">
               <CampoFlutuante label="Nome do comércio"><input name="nomeComercio" defaultValue={editingCommerce.nomeComercio} placeholder=" " required /></CampoFlutuante>
               <div className="grade-formulario">
@@ -647,7 +647,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
               <div className="acoes-formulario"><button>Salvar alterações</button><button type="button" className="fantasma" onClick={() => setEditingCommerce(null)}>Cancelar</button></div>
             </form>
           </section>}
-          {!admin && <section className="painel-conteudo painel-fixo"><h2>Cadastrar novo comércio</h2><p className="suave">O cadastro ficará pendente até a aprovação da rede.</p>
+          {owner && (subscription?.status === 'AGUARDANDO_APROVACAO' || subscription?.acessoOperacional) && <section className="painel-conteudo painel-fixo"><h2>Cadastrar novo comércio</h2><p className="suave">O cadastro ficará pendente até a aprovação da rede.</p>
             <form onSubmit={createComercio} className="formulario-compacto">
               <CampoFlutuante label="Nome do comércio"><input name="nomeComercio" placeholder=" " required /></CampoFlutuante>
               <CampoFlutuante label="CNPJ: 00.000.000/0000-00"><input name="cnpj" inputMode="numeric" maxLength={18} placeholder=" " onInput={event => { event.currentTarget.value = cnpjMask(event.currentTarget.value) }} required /></CampoFlutuante>
@@ -719,17 +719,17 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
       </section>}
 
       {section === 'assinatura' && <section className="visualizacao-secao animar-entrada" key="assinatura">
-        <div className="titulo-secao"><div><p className="sobretitulo">Plano e acesso</p><h2>{admin ? 'Assinaturas' : 'Minha assinatura'}</h2></div><p>{admin ? 'Acompanhe e controle os acessos comerciais.' : 'Acompanhe seu teste gratuito e a situação do plano.'}</p></div>
+        <div className="titulo-secao"><div><p className="sobretitulo">Plano e acesso</p><h2>{admin ? 'Assinaturas' : 'Minha assinatura'}</h2></div><p>{admin ? 'Acompanhe e controle os acessos comerciais.' : 'Acompanhe a situação do seu plano.'}</p></div>
         {!admin && subscription && <section className="painel-conteudo cartao-assinatura">
           <div className={`selo-assinatura ${subscription.status.toLowerCase()}`}>{subscriptionStatusLabels[subscription.status]}</div>
-          <h2>{subscription.plano === 'PROFISSIONAL' ? 'Plano profissional' : 'Teste gratuito de 30 dias'}</h2>
-          <p>{subscription.status === 'AGUARDANDO_APROVACAO' ? 'O teste começa somente quando o administrador aprovar seu primeiro comércio.' : subscription.status === 'EM_TESTE' ? `Você ainda tem ${subscription.diasRestantes} dia(s) de acesso às funções principais.` : subscription.status === 'ATIVA' ? 'Seu acesso completo está ativo, incluindo relatórios em PDF.' : 'As funções operacionais estão bloqueadas até a ativação do plano profissional.'}</p>
+          <h2>Plano profissional · R$ 39,90 por mês</h2>
+          <p>{subscription.status === 'AGUARDANDO_APROVACAO' ? 'O pagamento ficará disponível quando o administrador aprovar seu primeiro comércio.' : subscription.status === 'ATIVA' ? 'Seu acesso completo está ativo, incluindo relatórios em PDF.' : 'As funções operacionais estão bloqueadas até a confirmação do pagamento.'}</p>
           <dl className="detalhes-assinatura">
-            <div><dt>Início do teste</dt><dd>{subscription.inicioTeste ? new Date(`${subscription.inicioTeste}T12:00:00`).toLocaleDateString('pt-BR') : 'Após aprovação do comércio'}</dd></div>
-            <div><dt>Fim do teste</dt><dd>{subscription.fimTeste ? new Date(`${subscription.fimTeste}T12:00:00`).toLocaleDateString('pt-BR') : '-'}</dd></div>
+            <div><dt>Mensalidade</dt><dd>R$ 39,90</dd></div>
+            <div><dt>Próxima cobrança</dt><dd>{subscription.proximaCobranca ? new Date(`${subscription.proximaCobranca}T12:00:00`).toLocaleDateString('pt-BR') : 'Após o primeiro pagamento'}</dd></div>
             <div><dt>Relatórios PDF</dt><dd>{subscription.podeGerarRelatorio ? 'Liberados' : 'Plano profissional'}</dd></div>
           </dl>
-          {owner && ['EXPIRADA', 'ATRASADA', 'CANCELADA'].includes(subscription.status) && <button disabled={pixLoading} onClick={generatePixCharge}>{pixLoading ? 'Gerando cobrança...' : 'Pagar assinatura com Pix'}</button>}
+          {owner && ['AGUARDANDO_PAGAMENTO', 'EXPIRADA', 'ATRASADA', 'CANCELADA'].includes(subscription.status) && <button disabled={pixLoading} onClick={generatePixCharge}>{pixLoading ? 'Gerando cobrança...' : 'Pagar assinatura com Pix'}</button>}
           {pixCharge && <div className="cobranca-pix animar-entrada">
             <h3>Pix de {pixCharge.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</h3>
             <img src={pixCharge.qrCodeBase64} alt="QR Code da cobrança Pix" />
@@ -744,7 +744,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
         {admin && <>
           <div className="estatisticas estatisticas-assinaturas">
             <article><small>Total de assinaturas</small><strong>{subscriptions.length}</strong><span>comerciantes cadastrados</span></article>
-            <article><small>Acessos liberados</small><strong>{subscriptions.filter(item => item.acessoOperacional).length}</strong><span>teste ou plano ativo</span></article>
+            <article><small>Acessos liberados</small><strong>{subscriptions.filter(item => item.acessoOperacional).length}</strong><span>plano pago e ativo</span></article>
             <article><small>Solicitações pendentes</small><strong>{subscriptions.filter(item => item.solicitacaoAtivacaoEm).length}</strong><span>aguardando sua análise</span></article>
           </div>
           <section className="painel-conteudo">
@@ -757,7 +757,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
             <div className="lista-assinaturas">{filteredSubscriptions.map(item => <article key={item.id} className={`item-assinatura ${item.solicitacaoAtivacaoEm ? 'solicitacao-pendente' : ''}`}>
               <div><strong>{item.nomeComerciante}</strong><small>{item.emailMascarado}</small>{item.solicitacaoAtivacaoEm && <b>Solicitou ativação em {new Date(item.solicitacaoAtivacaoEm).toLocaleString('pt-BR')}</b>}</div>
               <span className={`indicador ${item.acessoOperacional ? 'aprovado' : 'rejeitado'}`}>{subscriptionStatusLabels[item.status]}</span>
-              <div className="datas-assinatura"><small>{item.plano === 'PROFISSIONAL' ? 'Plano profissional' : `Teste · ${item.diasRestantes} dia(s)`}</small><small>Fim do teste: {item.fimTeste ? new Date(`${item.fimTeste}T12:00:00`).toLocaleDateString('pt-BR') : '-'}</small><small>Próxima cobrança: {item.proximaCobranca ? new Date(`${item.proximaCobranca}T12:00:00`).toLocaleDateString('pt-BR') : '-'}</small></div>
+              <div className="datas-assinatura"><small>Plano profissional · R$ 39,90/mês</small><small>Próxima cobrança: {item.proximaCobranca ? new Date(`${item.proximaCobranca}T12:00:00`).toLocaleDateString('pt-BR') : '-'}</small></div>
               <div className="acoes-assinatura"><button className="pequeno perigo" disabled={item.status === 'CANCELADA'} onClick={() => cancelSubscription(item.id)}>Cancelar</button></div>
             </article>)}{!filteredSubscriptions.length && <p className="vazio">Nenhuma assinatura encontrada com esses filtros.</p>}</div>
           </section>
