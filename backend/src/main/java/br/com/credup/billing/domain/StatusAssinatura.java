@@ -2,7 +2,7 @@ package br.com.credup.billing.domain;
 
 public enum StatusAssinatura {
     AGUARDANDO_APROVACAO,
-    EM_TESTE,
+    AGUARDANDO_PAGAMENTO,
     ATIVA,
     ATRASADA,
     EXPIRADA,

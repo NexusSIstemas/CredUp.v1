@@ -21,12 +21,6 @@ public class Assinatura extends EntidadeBase {
     @Column(name = "status", nullable = false, length = 40)
     private StatusAssinatura status;
 
-    @Column(name = "inicio_teste")
-    private LocalDate inicioTeste;
-
-    @Column(name = "fim_teste")
-    private LocalDate fimTeste;
-
     @Column(name = "inicio_assinatura")
     private LocalDate inicioAssinatura;
 
@@ -76,22 +70,6 @@ public class Assinatura extends EntidadeBase {
 
     public void setStatus(StatusAssinatura status) {
         this.status = status;
-    }
-
-    public LocalDate getInicioTeste() {
-        return inicioTeste;
-    }
-
-    public void setInicioTeste(LocalDate inicioTeste) {
-        this.inicioTeste = inicioTeste;
-    }
-
-    public LocalDate getFimTeste() {
-        return fimTeste;
-    }
-
-    public void setFimTeste(LocalDate fimTeste) {
-        this.fimTeste = fimTeste;
     }
 
     public LocalDate getInicioAssinatura() {
