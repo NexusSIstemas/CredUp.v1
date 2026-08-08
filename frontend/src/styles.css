@@ -143,15 +143,15 @@ aside nav a.ativo { color:#fff; background:#ffffff12; }
 .painel { width:100%; max-width:1500px; margin:auto; padding:2.3rem 3vw 4rem; overflow:hidden; }
 .painel header h1 { font-size:2.1rem; margin:.2rem 0; letter-spacing:-.035em; }
 .cabecalho-painel { display:grid; gap:.8rem; margin-bottom:1.8rem; }
-.acoes-cabecalho { display:flex; align-items:center; justify-content:space-between; gap:.8rem; min-width:0; }
-.acoes-cabecalho .navegacao-superior { min-width:0; overflow-x:auto; }
+.acoes-cabecalho { display:flex; align-items:flex-start; justify-content:space-between; gap:.8rem; min-width:0; }
+.acoes-cabecalho .navegacao-superior { flex:1 1 auto; min-width:0; overflow:visible; }
 .acoes-cabecalho .alternar-privacidade { flex:0 0 auto; }
 .alternar-privacidade { display:flex; align-items:center; gap:.35rem; padding:.48rem .65rem; border:1px solid #d8e4dd; color:#2b6248; background:#fff; white-space:nowrap; box-shadow:0 4px 12px #173c2908; font-size:.76rem; }
 .alternar-privacidade:hover { color:#fff; background:#176b47; }
 .alternar-privacidade.visivel { color:#fff; background:#176b47; }
 .alternar-privacidade svg { width:.95rem; height:.95rem; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 .oculto { color:#7d8982; letter-spacing:.025em; transition:color .22s ease,filter .22s ease; }
-.navegacao-superior { display:flex; align-items:center; gap:.35rem; padding:.35rem; border:1px solid #dfe7e2; border-radius:13px; background:#fff; box-shadow:0 5px 18px #173c290b; }
+.navegacao-superior { display:flex; flex-wrap:wrap; align-items:center; gap:.35rem; padding:.35rem; border:1px solid #dfe7e2; border-radius:13px; background:#fff; box-shadow:0 5px 18px #173c290b; }
 .navegacao-superior button { position:relative; padding:.7rem 1rem; color:#64736b; background:transparent; white-space:nowrap; overflow:hidden; }
 .navegacao-superior button::after { content:""; position:absolute; right:50%; bottom:2px; left:50%; height:3px; border-radius:3px; background:#1d7953; transition:left .28s ease,right .28s ease; }
 .navegacao-superior button:hover { color:#174b35; background:#eff7f2; transform:none; }
