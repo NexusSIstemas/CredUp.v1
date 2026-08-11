@@ -216,7 +216,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
     if (admin) {
       loadResets()
       loadSubscriptions()
-    } else {
+    } else if (owner) {
       loadSubscription()
     }
   }, [])
@@ -227,8 +227,8 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
 
   useEffect(() => {
     const busca = query.trim()
-    if (!admin && !subscriptionLoaded) return
-    if (!admin && !subscription?.acessoOperacional) {
+    if (owner && !subscriptionLoaded) return
+    if (owner && !subscription?.acessoOperacional) {
       setDividas([])
       return
     }
@@ -268,7 +268,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   }, [pixCharge?.txid, pixCharge?.status])
 
   function openSecao(next: Secao) {
-    if (!admin && subscriptionLoaded && !subscription?.acessoOperacional
+    if (owner && subscriptionLoaded && !subscription?.acessoOperacional
       && ['defaults', 'staff'].includes(next)) {
       showAlert('Seu acesso operacional está bloqueado. Consulte sua assinatura.', 'alerta')
       setSecao('assinatura')
@@ -294,7 +294,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
     if (next === 'perfil') loadPerfil()
     if (next === 'staff') loadStaff()
     if (next === 'auditoria') loadAuditoria()
-    if (next === 'assinatura') admin ? loadSubscriptions() : loadSubscription()
+    if (next === 'assinatura') admin ? loadSubscriptions() : owner && loadSubscription()
   }
 
   async function generatePixCharge() {
@@ -581,7 +581,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
               Recuperação {resetRequests.length > 0 && <span>{resetRequests.length}</span>}
             </button>}
             {admin && <button className={section === 'auditoria' ? 'ativo' : ''} onClick={() => openSecao('auditoria')}>Logs</button>}
-            <button className={section === 'assinatura' ? 'ativo' : ''} onClick={() => openSecao('assinatura')}>{admin ? 'Assinaturas' : 'Minha assinatura'}</button>
+            {!staff && <button className={section === 'assinatura' ? 'ativo' : ''} onClick={() => openSecao('assinatura')}>{admin ? 'Assinaturas' : 'Minha assinatura'}</button>}
             <button className={`botao-perfil-navegacao ${section === 'perfil' ? 'ativo' : ''}`} onClick={() => openSecao('perfil')} aria-label="Abrir meu perfil">
               <b className="avatar-perfil-navegacao">{(perfil?.nome ?? sessao.nome)[0]}</b>
               <small>Meu perfil</small>
@@ -599,9 +599,9 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
         </div>
       </header>
 
-      {!admin && subscription && <div className={`faixa-assinatura ${subscription.status === 'ATIVA' ? 'verde' : subscription.status === 'AGUARDANDO_APROVACAO' ? 'amarela' : 'vermelha'}`}>
+      {owner && subscription && <div className={`faixa-assinatura ${subscription.status === 'ATIVA' ? 'verde' : subscription.status === 'AGUARDANDO_APROVACAO' || subscription.acessoOperacional ? 'amarela' : 'vermelha'}`}>
         <span className="semaforo-assinatura" />
-        <div><strong>{subscriptionStatusLabels[subscription.status]}</strong><small>{subscription.status === 'ATIVA' ? `Próxima renovação em ${subscription.proximaCobranca ? new Date(`${subscription.proximaCobranca}T12:00:00`).toLocaleDateString('pt-BR') : '-'}` : 'Consulte os detalhes da sua assinatura'}</small></div>
+        <div><strong>{subscriptionStatusLabels[subscription.status]}</strong><small>{subscription.acessoOperacional ? `Acesso válido até ${subscription.proximaCobranca ? new Date(`${subscription.proximaCobranca}T12:00:00`).toLocaleDateString('pt-BR') : '-'}` : 'Consulte os detalhes da sua assinatura'}</small></div>
         <button className="pequeno" onClick={() => openSecao('assinatura')}>Ver assinatura</button>
       </div>}
 
@@ -718,15 +718,15 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
         </section>}
       </section>}
 
-      {section === 'assinatura' && <section className="visualizacao-secao animar-entrada" key="assinatura">
+      {section === 'assinatura' && !staff && <section className="visualizacao-secao animar-entrada" key="assinatura">
         <div className="titulo-secao"><div><p className="sobretitulo">Plano e acesso</p><h2>{admin ? 'Assinaturas' : 'Minha assinatura'}</h2></div><p>{admin ? 'Acompanhe e controle os acessos comerciais.' : 'Acompanhe a situação do seu plano.'}</p></div>
         {!admin && subscription && <section className="painel-conteudo cartao-assinatura">
           <div className={`selo-assinatura ${subscription.status.toLowerCase()}`}>{subscriptionStatusLabels[subscription.status]}</div>
           <h2>Plano profissional · R$ 39,90 por mês</h2>
-          <p>{subscription.status === 'AGUARDANDO_APROVACAO' ? 'O pagamento ficará disponível quando o administrador aprovar seu primeiro comércio.' : subscription.status === 'ATIVA' ? 'Seu acesso completo está ativo, incluindo relatórios em PDF.' : 'As funções operacionais estão bloqueadas até a confirmação do pagamento.'}</p>
+          <p>{subscription.status === 'AGUARDANDO_APROVACAO' ? 'O pagamento ficará disponível quando o administrador aprovar seu primeiro comércio.' : subscription.status === 'ATIVA' ? 'Seu acesso completo está ativo, incluindo relatórios em PDF.' : subscription.acessoOperacional ? 'O pagamento está no período de tolerância de três dias. Seu acesso permanece liberado enquanto aguardamos a confirmação.' : 'As funções operacionais estão bloqueadas até a confirmação do pagamento.'}</p>
           <dl className="detalhes-assinatura">
             <div><dt>Mensalidade</dt><dd>R$ 39,90</dd></div>
-            <div><dt>Próxima cobrança</dt><dd>{subscription.proximaCobranca ? new Date(`${subscription.proximaCobranca}T12:00:00`).toLocaleDateString('pt-BR') : 'Após o primeiro pagamento'}</dd></div>
+            <div><dt>Vencimento</dt><dd>{subscription.proximaCobranca ? new Date(`${subscription.proximaCobranca}T12:00:00`).toLocaleDateString('pt-BR') : 'Após o primeiro pagamento'}</dd></div>
             <div><dt>Relatórios PDF</dt><dd>{subscription.podeGerarRelatorio ? 'Liberados' : 'Plano profissional'}</dd></div>
           </dl>
           {owner && ['AGUARDANDO_PAGAMENTO', 'EXPIRADA', 'ATRASADA', 'CANCELADA'].includes(subscription.status) && <button disabled={pixLoading} onClick={generatePixCharge}>{pixLoading ? 'Gerando cobrança...' : 'Pagar assinatura com Pix'}</button>}
@@ -757,7 +757,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
             <div className="lista-assinaturas">{filteredSubscriptions.map(item => <article key={item.id} className={`item-assinatura ${item.solicitacaoAtivacaoEm ? 'solicitacao-pendente' : ''}`}>
               <div><strong>{item.nomeComerciante}</strong><small>{item.emailMascarado}</small>{item.solicitacaoAtivacaoEm && <b>Solicitou ativação em {new Date(item.solicitacaoAtivacaoEm).toLocaleString('pt-BR')}</b>}</div>
               <span className={`indicador ${item.acessoOperacional ? 'aprovado' : 'rejeitado'}`}>{subscriptionStatusLabels[item.status]}</span>
-              <div className="datas-assinatura"><small>Plano profissional · R$ 39,90/mês</small><small>Próxima cobrança: {item.proximaCobranca ? new Date(`${item.proximaCobranca}T12:00:00`).toLocaleDateString('pt-BR') : '-'}</small></div>
+              <div className="datas-assinatura"><small>Plano profissional · R$ 39,90/mês</small><small>Vencimento: {item.proximaCobranca ? new Date(`${item.proximaCobranca}T12:00:00`).toLocaleDateString('pt-BR') : '-'}</small></div>
               <div className="acoes-assinatura"><button className="pequeno perigo" disabled={item.status === 'CANCELADA'} onClick={() => cancelSubscription(item.id)}>Cancelar</button></div>
             </article>)}{!filteredSubscriptions.length && <p className="vazio">Nenhuma assinatura encontrada com esses filtros.</p>}</div>
           </section>
