@@ -214,10 +214,47 @@ public class ServicoCobrancaPix {
     }
 
     private ExcecaoApi erroIntegracao(RestClientResponseException erro, String operacao) {
+        String detalheSeguro = obterDetalheSeguro(erro);
         return new ExcecaoApi(
                 HttpStatus.BAD_GATEWAY,
                 "O Mercado Pago não conseguiu " + operacao
-                        + " (código " + erro.getStatusCode().value() + ")");
+                        + " (código " + erro.getStatusCode().value() + ")"
+                        + detalheSeguro);
+    }
+
+    private String obterDetalheSeguro(RestClientResponseException erro) {
+        try {
+            JsonNode resposta = erro.getResponseBodyAs(JsonNode.class);
+            JsonNode detalhe = resposta == null
+                    ? null
+                    : resposta.path("errors").path(0);
+            String codigo = detalhe == null
+                    ? ""
+                    : detalhe.path("code").asText();
+            String mensagem = detalhe == null
+                    ? ""
+                    : detalhe.path("message").asText();
+            codigo = limparDetalhe(codigo, 80);
+            mensagem = limparDetalhe(mensagem, 180);
+            if (codigo.isBlank() && mensagem.isBlank()) {
+                return "";
+            }
+            return ": " + (codigo.isBlank() ? "" : codigo + " - ") + mensagem;
+        } catch (RuntimeException ignorado) {
+            return "";
+        }
+    }
+
+    private String limparDetalhe(String valor, int tamanhoMaximo) {
+        if (valor == null) {
+            return "";
+        }
+        String limpo = valor.replaceAll(
+                "[^\\p{L}\\p{N} .,_:;()/-]",
+                "");
+        return limpo
+                .substring(0, Math.min(limpo.length(), tamanhoMaximo))
+                .trim();
     }
 
     private JsonNode exigirResposta(JsonNode resposta) {
