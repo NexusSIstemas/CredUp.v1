@@ -250,7 +250,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   }, [admin, section])
 
   useEffect(() => {
-    if (!pixCharge || pixCharge.status === 'CONCLUIDA') return
+    if (!pixCharge || ['CONCLUIDA', 'processed'].includes(pixCharge.status)) return
     const interval = window.setInterval(async () => {
       try {
         const status = await api<StatusCobrancaPix>(`/assinaturas/minha/cobranca-pix/${pixCharge.txid}`)
@@ -736,7 +736,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
             <label>Pix Copia e Cola</label>
             <textarea readOnly value={pixCharge.pixCopiaECola} />
             <button className="pequeno" onClick={() => { void navigator.clipboard.writeText(pixCharge.pixCopiaECola); showAlert('Pix Copia e Cola copiado.', 'sucesso') }}>Copiar código Pix</button>
-            <p className={`status-pix ${pixCharge.status === 'CONCLUIDA' ? 'pago' : ''}`}>{pixCharge.status === 'CONCLUIDA' ? 'Pagamento confirmado' : 'Aguardando confirmação do Banco do Brasil...'}</p>
+            <p className={`status-pix ${['CONCLUIDA', 'processed'].includes(pixCharge.status) ? 'pago' : ''}`}>{['CONCLUIDA', 'processed'].includes(pixCharge.status) ? 'Pagamento confirmado pelo Mercado Pago' : 'Aguardando confirmação do Mercado Pago...'}</p>
             <small>{pixCharge.avisoConfirmacao}</small>
           </div>}
           {subscription.solicitacaoAtivacaoEm && <p className="solicitacao-enviada">Solicitação enviada. Aguarde a análise do administrador.</p>}

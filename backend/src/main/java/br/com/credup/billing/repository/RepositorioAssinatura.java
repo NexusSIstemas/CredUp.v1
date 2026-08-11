@@ -6,5 +6,6 @@ import java.util.*;
 
 public interface RepositorioAssinatura extends JpaRepository<Assinatura, UUID> {
     Optional<Assinatura> findByComercianteId(UUID comercianteId);
+    Optional<Assinatura> findByPixTxid(String pixTxid);
     List<Assinatura> findAllByOrderByCreatedAtDesc();
 }

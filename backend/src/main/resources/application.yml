@@ -23,11 +23,10 @@ app:
   cors:
     allowed-origin: ${CORS_ALLOWED_ORIGIN:http://localhost:5173}
   pix:
-    bb:
-      ambiente: ${BB_PIX_AMBIENTE:sandbox}
-      app-key: ${BB_PIX_APP_KEY:}
-      client-id: ${BB_PIX_CLIENT_ID:}
-      client-secret: ${BB_PIX_CLIENT_SECRET:}
-      chave: ${BB_PIX_CHAVE:}
+    mercado-pago:
+      ambiente: ${MERCADO_PAGO_AMBIENTE:sandbox}
+      access-token: ${MERCADO_PAGO_ACCESS_TOKEN:}
       valor-mensal: ${PIX_VALOR_MENSAL:39.90}
-      expiracao-segundos: ${BB_PIX_EXPIRACAO_SEGUNDOS:3600}
+      expiracao-segundos: ${MERCADO_PAGO_PIX_EXPIRACAO_SEGUNDOS:3600}
+      api-url: ${MERCADO_PAGO_API_URL:https://api.mercadopago.com}
+      webhook-secret: ${MERCADO_PAGO_WEBHOOK_SECRET:}

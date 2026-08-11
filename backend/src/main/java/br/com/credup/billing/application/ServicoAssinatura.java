@@ -113,6 +113,22 @@ public class ServicoAssinatura {
         if (!Objects.equals(assinatura.getPixTxid(), txid)) {
             throw new ExcecaoApi(HttpStatus.NOT_FOUND, "Cobrança Pix não encontrada");
         }
+        return confirmarPagamentoPix(assinatura, usuario);
+    }
+
+    @Transactional
+    public void confirmarPagamentoPixPorWebhook(String txid) {
+        assinaturas.findByPixTxid(txid).ifPresent(assinatura ->
+                confirmarPagamentoPix(assinatura, assinatura.getComerciante()));
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<BigDecimal> obterValorCobrancaPix(String txid) {
+        return assinaturas.findByPixTxid(txid)
+                .map(Assinatura::getPixValor);
+    }
+
+    private Instant confirmarPagamentoPix(Assinatura assinatura, Usuario usuario) {
         if (assinatura.getPixPagoEm() != null) {
             return assinatura.getPixPagoEm();
         }
@@ -139,7 +155,7 @@ public class ServicoAssinatura {
                 "Assinatura",
                 assinatura.getId(),
                 nomeComerciante(assinatura),
-                "Pagamento Pix confirmado pelo Banco do Brasil; assinatura ativada por 30 dias"));
+                "Pagamento Pix confirmado pelo Mercado Pago; assinatura ativada por 30 dias"));
         return confirmadoEm;
     }
 
