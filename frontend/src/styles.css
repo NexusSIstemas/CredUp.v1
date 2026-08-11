@@ -134,6 +134,12 @@ aside nav a.ativo { color:#fff; background:#ffffff12; }
 .mensagem-lateral small { color:#74b492; text-transform:uppercase; letter-spacing:.1em; font-weight:700; }
 .mensagem-lateral p { margin:.65rem 0; font-size:.85rem; line-height:1.55; }
 .perfil { display:flex; gap:.7rem; align-items:center; padding:1rem .4rem; border-top:1px solid #ffffff1a; }
+.botao-assinatura-lateral { display:flex; align-items:center; gap:.7rem; width:100%; margin-bottom:.35rem; padding:.75rem .6rem; color:#dfeee6; background:transparent; text-align:left; }
+.botao-assinatura-lateral:hover,.botao-assinatura-lateral.ativo { background:#ffffff12; transform:none; }
+.botao-assinatura-lateral>span:last-child { display:grid; gap:.15rem; }
+.botao-assinatura-lateral small { color:#8fb7a2; font-size:.65rem; }
+.icone-assinatura-lateral { display:grid; flex:0 0 auto; place-items:center; width:38px; height:38px; border:1px solid #75b694; border-radius:11px; color:#b8e2ca; background:#ffffff0b; font-family:'Manrope',sans-serif; font-weight:800; }
+.botao-assinatura-lateral.ativo .icone-assinatura-lateral { color:#174a35; background:#9ee0ba; }
 .botao-perfil { width:100%; border-radius:10px; color:inherit; background:transparent; text-align:left; }
 .botao-perfil:hover { background:#ffffff0d; transform:none; }
 .perfil small,.perfil strong { display:block; }
@@ -310,6 +316,9 @@ td { padding:.9rem .75rem; border-bottom:1px solid #f0f2f1; font-size:.9rem; }
   .estrutura-aplicacao { grid-template-columns:1fr; }
   aside { position:static; height:auto; padding:1rem; flex-direction:row; align-items:center; }
   aside nav,.perfil,.mensagem-lateral { display:none; }
+  .botao-assinatura-lateral { width:auto; margin:0 0 0 auto; padding:.45rem .55rem; }
+  .botao-assinatura-lateral>span:last-child { display:none; }
+  .icone-assinatura-lateral { width:34px; height:34px; }
   aside .fantasma { margin-left:auto; }
   .cabecalho-painel { align-items:stretch; }
   .acoes-cabecalho { align-items:stretch; flex-direction:column; }

@@ -564,6 +564,10 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
         <small>Ambiente protegido</small>
         <p>Gestão colaborativa para decisões de crédito mais seguras.</p>
       </div>
+      {!staff && <button className={`botao-assinatura-lateral ${section === 'assinatura' ? 'ativo' : ''}`} onClick={() => openSecao('assinatura')}>
+        <span className="icone-assinatura-lateral">A</span>
+        <span><strong>{admin ? 'Assinaturas' : 'Minha assinatura'}</strong><small>{admin ? 'Gerenciar planos' : subscription ? subscriptionStatusLabels[subscription.status] : 'Ver meu plano'}</small></span>
+      </button>}
       <button className="perfil botao-perfil" onClick={() => openSecao('perfil')}><div className="avatar">{(perfil?.nome ?? sessao.nome)[0]}</div><div><strong>{perfil?.nome ?? sessao.nome}</strong><small>{roleLabels[sessao.perfilAcesso]}</small></div></button>
       <button className="fantasma" onClick={onLogout}>Sair</button>
     </aside>
@@ -581,7 +585,6 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
               Recuperação {resetRequests.length > 0 && <span>{resetRequests.length}</span>}
             </button>}
             {admin && <button className={section === 'auditoria' ? 'ativo' : ''} onClick={() => openSecao('auditoria')}>Logs</button>}
-            {!staff && <button className={section === 'assinatura' ? 'ativo' : ''} onClick={() => openSecao('assinatura')}>{admin ? 'Assinaturas' : 'Minha assinatura'}</button>}
             <button className={`botao-perfil-navegacao ${section === 'perfil' ? 'ativo' : ''}`} onClick={() => openSecao('perfil')} aria-label="Abrir meu perfil">
               <b className="avatar-perfil-navegacao">{(perfil?.nome ?? sessao.nome)[0]}</b>
               <small>Meu perfil</small>
@@ -599,7 +602,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
         </div>
       </header>
 
-      {owner && subscription && <div className={`faixa-assinatura ${subscription.status === 'ATIVA' ? 'verde' : subscription.status === 'AGUARDANDO_APROVACAO' || subscription.acessoOperacional ? 'amarela' : 'vermelha'}`}>
+      {section === 'assinatura' && owner && subscription && <div className={`faixa-assinatura ${subscription.status === 'ATIVA' ? 'verde' : subscription.status === 'AGUARDANDO_APROVACAO' || subscription.acessoOperacional ? 'amarela' : 'vermelha'}`}>
         <span className="semaforo-assinatura" />
         <div><strong>{subscriptionStatusLabels[subscription.status]}</strong><small>{subscription.acessoOperacional ? `Acesso válido até ${subscription.proximaCobranca ? new Date(`${subscription.proximaCobranca}T12:00:00`).toLocaleDateString('pt-BR') : '-'}` : 'Consulte os detalhes da sua assinatura'}</small></div>
         <button className="pequeno" onClick={() => openSecao('assinatura')}>Ver assinatura</button>
