@@ -33,7 +33,9 @@ public class ConfiguracaoSeguranca {
                         .accessDeniedHandler((req, res, ex) -> res.sendError(HttpServletResponse.SC_FORBIDDEN)))
                 .authorizeHttpRequests(a -> a
                         .requestMatchers("/api/auth/register", "/api/auth/login",
-                                "/api/auth/forgot-password", "/actuator/health").permitAll()
+                                "/api/auth/forgot-password",
+                                "/api/webhooks/mercado-pago",
+                                "/actuator/health").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwt, UsernamePasswordAuthenticationFilter.class)
                 .build();

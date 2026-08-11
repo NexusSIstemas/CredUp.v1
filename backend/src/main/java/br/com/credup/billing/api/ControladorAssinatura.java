@@ -37,7 +37,7 @@ public class ControladorAssinatura {
     }
 
     @GetMapping("/minha")
-    @PreAuthorize("hasAnyRole('MERCHANT_OWNER','MERCHANT_STAFF')")
+    @PreAuthorize("hasRole('MERCHANT_OWNER')")
     RespostaAssinatura minha(@AuthenticationPrincipal Usuario usuario) {
         return servico.minha(usuario);
     }

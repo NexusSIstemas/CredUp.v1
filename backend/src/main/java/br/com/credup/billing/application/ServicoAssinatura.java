@@ -18,7 +18,7 @@ import java.util.*;
 
 @Service
 public class ServicoAssinatura {
-    public static final int DIAS_PLANO_MENSAL = 30;
+    public static final int DIAS_TOLERANCIA_PAGAMENTO = 3;
 
     private final RepositorioAssinatura assinaturas;
     private final RepositorioRegistroAuditoria auditoria;
@@ -113,22 +113,34 @@ public class ServicoAssinatura {
         if (!Objects.equals(assinatura.getPixTxid(), txid)) {
             throw new ExcecaoApi(HttpStatus.NOT_FOUND, "Cobrança Pix não encontrada");
         }
+        return confirmarPagamentoPix(assinatura, usuario);
+    }
+
+    @Transactional
+    public void confirmarPagamentoPixPorWebhook(String txid) {
+        assinaturas.findByPixTxid(txid).ifPresent(assinatura ->
+                confirmarPagamentoPix(assinatura, assinatura.getComerciante()));
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<BigDecimal> obterValorCobrancaPix(String txid) {
+        return assinaturas.findByPixTxid(txid)
+                .map(Assinatura::getPixValor);
+    }
+
+    private Instant confirmarPagamentoPix(Assinatura assinatura, Usuario usuario) {
         if (assinatura.getPixPagoEm() != null) {
             return assinatura.getPixPagoEm();
         }
 
         var hoje = LocalDate.now();
-        var baseRenovacao = assinatura.getProximaCobranca() != null
-                && assinatura.getProximaCobranca().isAfter(hoje)
-                        ? assinatura.getProximaCobranca()
-                        : hoje;
         var confirmadoEm = Instant.now();
         assinatura.setPlano(PlanoAssinatura.PROFISSIONAL);
         assinatura.setStatus(StatusAssinatura.ATIVA);
         if (assinatura.getInicioAssinatura() == null) {
             assinatura.setInicioAssinatura(hoje);
         }
-        assinatura.setProximaCobranca(baseRenovacao.plusDays(DIAS_PLANO_MENSAL));
+        assinatura.setProximaCobranca(YearMonth.from(hoje).atEndOfMonth());
         assinatura.setSolicitacaoAtivacaoEm(null);
         assinatura.setCanceladaEm(null);
         assinatura.setPixStatus("CONCLUIDA");
@@ -139,7 +151,7 @@ public class ServicoAssinatura {
                 "Assinatura",
                 assinatura.getId(),
                 nomeComerciante(assinatura),
-                "Pagamento Pix confirmado pelo Banco do Brasil; assinatura ativada por 30 dias"));
+                "Pagamento Pix confirmado pelo Mercado Pago; assinatura ativada até o fim do mês"));
         return confirmadoEm;
     }
 
@@ -169,7 +181,7 @@ public class ServicoAssinatura {
         if (!temAcessoOperacional(assinatura)) {
             throw new ExcecaoApi(
                     HttpStatus.FORBIDDEN,
-                    "Seu período de teste terminou. Ative o plano profissional para continuar usando o CredUp");
+                    "Pagamento pendente. Quite a assinatura para continuar usando o CredUp");
         }
     }
 
@@ -180,10 +192,7 @@ public class ServicoAssinatura {
         }
         var assinatura = obterDoUsuario(usuario);
         atualizarStatus(assinatura);
-        if (assinatura.getStatus() == StatusAssinatura.EXPIRADA
-                || assinatura.getStatus() == StatusAssinatura.AGUARDANDO_PAGAMENTO
-                || assinatura.getStatus() == StatusAssinatura.ATRASADA
-                || assinatura.getStatus() == StatusAssinatura.CANCELADA) {
+        if (!temAcessoOperacional(assinatura)) {
             throw new ExcecaoApi(
                     HttpStatus.FORBIDDEN,
                     "Ative o plano profissional para gerenciar seus comércios");
@@ -197,7 +206,7 @@ public class ServicoAssinatura {
         }
         var assinatura = obterDoUsuario(usuario);
         atualizarStatus(assinatura);
-        if (assinatura.getStatus() != StatusAssinatura.ATIVA) {
+        if (!temAcessoOperacional(assinatura)) {
             throw new ExcecaoApi(
                     HttpStatus.FORBIDDEN,
                     "Relatórios em PDF estão disponíveis somente no plano pago");
@@ -243,16 +252,28 @@ public class ServicoAssinatura {
         if (assinatura.getStatus() == StatusAssinatura.ATIVA
                 && assinatura.getProximaCobranca() != null
                 && hoje.isAfter(assinatura.getProximaCobranca())) {
+            assinatura.setStatus(StatusAssinatura.AGUARDANDO_PAGAMENTO);
+        }
+        if (assinatura.getStatus() == StatusAssinatura.AGUARDANDO_PAGAMENTO
+                && assinatura.getProximaCobranca() != null
+                && hoje.isAfter(assinatura.getProximaCobranca()
+                        .plusDays(DIAS_TOLERANCIA_PAGAMENTO))) {
             assinatura.setStatus(StatusAssinatura.ATRASADA);
         }
     }
 
     private boolean temAcessoOperacional(Assinatura assinatura) {
-        return assinatura.getStatus() == StatusAssinatura.ATIVA;
+        if (assinatura.getStatus() == StatusAssinatura.ATIVA) {
+            return true;
+        }
+        return assinatura.getStatus() == StatusAssinatura.AGUARDANDO_PAGAMENTO
+                && assinatura.getProximaCobranca() != null
+                && !LocalDate.now().isAfter(assinatura.getProximaCobranca()
+                        .plusDays(DIAS_TOLERANCIA_PAGAMENTO));
     }
 
     private RespostaAssinatura mapear(Assinatura assinatura) {
-        boolean ativa = assinatura.getStatus() == StatusAssinatura.ATIVA;
+        boolean ativa = temAcessoOperacional(assinatura);
         return new RespostaAssinatura(
                 assinatura.getId(),
                 assinatura.getComerciante().getId(),
