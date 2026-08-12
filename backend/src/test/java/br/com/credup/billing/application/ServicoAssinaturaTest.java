@@ -21,7 +21,7 @@ import static org.mockito.Mockito.when;
 
 class ServicoAssinaturaTest {
     @Test
-    void pagamentoAtivaAssinaturaAteFimDoMesAtual() {
+    void pagamentoAtivaAssinaturaPorUmMesAPartirDaContratacao() {
         var cenario = criarCenario(StatusAssinatura.AGUARDANDO_PAGAMENTO, null);
         cenario.assinatura().setPixTxid("ORD12345678901234567890");
 
@@ -31,8 +31,18 @@ class ServicoAssinaturaTest {
 
         assertEquals(StatusAssinatura.ATIVA, cenario.assinatura().getStatus());
         assertEquals(
-                YearMonth.now().atEndOfMonth(),
+                LocalDate.now().plusMonths(1),
                 cenario.assinatura().getProximaCobranca());
+    }
+
+    @Test
+    void preservaDiaAncoraDepoisDeFevereiro() {
+        assertEquals(
+                LocalDate.of(2027, 2, 28),
+                ServicoAssinatura.calcularVencimento(YearMonth.of(2027, 2), 31));
+        assertEquals(
+                LocalDate.of(2027, 3, 31),
+                ServicoAssinatura.calcularVencimento(YearMonth.of(2027, 3), 31));
     }
 
     @Test
