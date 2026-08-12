@@ -140,7 +140,7 @@ public class ServicoAssinatura {
         if (assinatura.getInicioAssinatura() == null) {
             assinatura.setInicioAssinatura(hoje);
         }
-        assinatura.setProximaCobranca(YearMonth.from(hoje).atEndOfMonth());
+        atualizarCicloCobranca(assinatura, hoje);
         assinatura.setSolicitacaoAtivacaoEm(null);
         assinatura.setCanceladaEm(null);
         assinatura.setPixStatus("CONCLUIDA");
@@ -151,8 +151,29 @@ public class ServicoAssinatura {
                 "Assinatura",
                 assinatura.getId(),
                 nomeComerciante(assinatura),
-                "Pagamento Pix confirmado pelo Mercado Pago; assinatura ativada até o fim do mês"));
+                "Pagamento Pix confirmado pelo Mercado Pago; assinatura ativada por um ciclo mensal"));
         return confirmadoEm;
+    }
+
+    private void atualizarCicloCobranca(Assinatura assinatura, LocalDate pagamentoEm) {
+        var vencimentoAtual = assinatura.getProximaCobranca();
+        boolean renovacaoDentroDaTolerancia = vencimentoAtual != null
+                && !pagamentoEm.isAfter(vencimentoAtual.plusDays(DIAS_TOLERANCIA_PAGAMENTO));
+
+        if (assinatura.getDiaCobranca() == null || !renovacaoDentroDaTolerancia) {
+            assinatura.setDiaCobranca(pagamentoEm.getDayOfMonth());
+        }
+
+        var mesBase = renovacaoDentroDaTolerancia
+                ? YearMonth.from(vencimentoAtual)
+                : YearMonth.from(pagamentoEm);
+        assinatura.setProximaCobranca(calcularVencimento(
+                mesBase.plusMonths(1),
+                assinatura.getDiaCobranca()));
+    }
+
+    static LocalDate calcularVencimento(YearMonth mes, int diaCobranca) {
+        return mes.atDay(Math.min(diaCobranca, mes.lengthOfMonth()));
     }
 
     @Transactional

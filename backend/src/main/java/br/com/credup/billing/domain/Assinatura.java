@@ -27,6 +27,9 @@ public class Assinatura extends EntidadeBase {
     @Column(name = "proxima_cobranca")
     private LocalDate proximaCobranca;
 
+    @Column(name = "dia_cobranca")
+    private Integer diaCobranca;
+
     @Column(name = "solicitacao_ativacao_em")
     private Instant solicitacaoAtivacaoEm;
 
@@ -86,6 +89,14 @@ public class Assinatura extends EntidadeBase {
 
     public void setProximaCobranca(LocalDate proximaCobranca) {
         this.proximaCobranca = proximaCobranca;
+    }
+
+    public Integer getDiaCobranca() {
+        return diaCobranca;
+    }
+
+    public void setDiaCobranca(Integer diaCobranca) {
+        this.diaCobranca = diaCobranca;
     }
 
     public Instant getSolicitacaoAtivacaoEm() {
