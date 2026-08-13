@@ -464,6 +464,25 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
     } catch (erro) { showError(erro) }
   }
 
+  async function configurarPin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const formElement = event.currentTarget
+    const form = new FormData(formElement)
+    if (form.get('pin') !== form.get('confirmacaoPin')) {
+      showAlert('A confirmação do PIN não coincide.', 'alerta')
+      return
+    }
+    try {
+      const updated = await api<Perfil>('/profile/recovery-pin', {
+        method: 'PUT',
+        body: JSON.stringify({ senhaAtual: form.get('senhaAtual'), pin: form.get('pin') })
+      })
+      setPerfil(updated)
+      formElement.reset()
+      showAlert('PIN de recuperação configurado com segurança.', 'sucesso')
+    } catch (erro) { showError(erro) }
+  }
+
   async function createStaff(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const formElement = event.currentTarget
@@ -650,7 +669,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
               <div className="acoes-formulario"><button>Salvar alterações</button><button type="button" className="fantasma" onClick={() => setEditingCommerce(null)}>Cancelar</button></div>
             </form>
           </section>}
-          {owner && (subscription?.status === 'AGUARDANDO_APROVACAO' || subscription?.acessoOperacional) && <section className="painel-conteudo painel-fixo"><h2>Cadastrar novo comércio</h2><p className="suave">O cadastro ficará pendente até a aprovação da rede.</p>
+          {owner && <section className="painel-conteudo painel-fixo"><h2>Solicitar cadastro de comércio</h2><p className="suave">A solicitação será analisada pelo administrador. O comércio só entrará na rede depois da aprovação.</p>
             <form onSubmit={createComercio} className="formulario-compacto">
               <CampoFlutuante label="Nome do comércio"><input name="nomeComercio" placeholder=" " required /></CampoFlutuante>
               <CampoFlutuante label="CNPJ: 00.000.000/0000-00"><input name="cnpj" inputMode="numeric" maxLength={18} placeholder=" " onInput={event => { event.currentTarget.value = cnpjMask(event.currentTarget.value) }} required /></CampoFlutuante>
@@ -661,7 +680,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
                 <CampoFlutuante label="CEP: 00000-000"><input name="cep" inputMode="numeric" maxLength={9} placeholder=" " onInput={event => { event.currentTarget.value = cepMask(event.currentTarget.value) }} required /></CampoFlutuante>
               </div>
               <CampoFlutuante label="Ponto de referência"><input name="pontoReferencia" placeholder=" " /></CampoFlutuante>
-              <button>Cadastrar comércio</button>
+              <button>Enviar solicitação</button>
             </form>
           </section>}
         </div>
@@ -856,6 +875,15 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
                   onInvalid={event => event.currentTarget.setCustomValidity('O usuário deve ter pelo menos 18 anos')}
                   onInput={event => { event.currentTarget.setCustomValidity(''); limitDateYear(event.currentTarget) }} /></CampoFlutuante>
                 <button>Salvar alterações</button>
+              </form>
+            </section>
+            <section className="painel-conteudo">
+              <div className="cabecalho-painel-conteudo"><div><h2>PIN de recuperação</h2><p>{perfil.pinRecuperacaoConfigurado ? 'Seu PIN está configurado. Você pode substituí-lo abaixo.' : 'Configure o PIN para recuperar sua conta sem depender do administrador.'}</p></div></div>
+              <div className="aviso-pin"><strong>⚠ Dado sensível: guarde este PIN</strong><p>O PIN tem 6 números, não será exibido novamente e será necessário se você esquecer a senha. Não compartilhe com funcionários ou terceiros.</p></div>
+              <form className="formulario-compacto" onSubmit={configurarPin}>
+                <CampoFlutuante label="Senha atual"><input name="senhaAtual" type="password" placeholder=" " required /></CampoFlutuante>
+                <div className="grade-formulario"><CampoFlutuante label="Novo PIN (6 números)"><input name="pin" type="password" inputMode="numeric" minLength={6} maxLength={6} pattern="\d{6}" placeholder=" " required onInput={event => { event.currentTarget.value = event.currentTarget.value.replace(/\D/g, '').slice(0, 6) }} /></CampoFlutuante><CampoFlutuante label="Confirmar PIN"><input name="confirmacaoPin" type="password" inputMode="numeric" minLength={6} maxLength={6} pattern="\d{6}" placeholder=" " required onInput={event => { event.currentTarget.value = event.currentTarget.value.replace(/\D/g, '').slice(0, 6) }} /></CampoFlutuante></div>
+                <button>{perfil.pinRecuperacaoConfigurado ? 'Alterar PIN' : 'Configurar PIN'}</button>
               </form>
             </section>
           </div>}

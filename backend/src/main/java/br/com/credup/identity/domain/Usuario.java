@@ -23,6 +23,8 @@ public class Usuario extends EntidadeBase {
     @Column(name = "data_nascimento") private LocalDate dateBirth;
     @Column(name = "deve_alterar_senha", nullable = false) private boolean deveAlterarSenha;
     @Column(name = "ativo", nullable = false) private boolean enabled = true;
+    @Column(name = "pin_recuperacao_hash") private String pinRecuperacaoHash;
+    @Column(name = "versao_credenciais", nullable = false) private long versaoCredenciais;
 
     @PrePersist
     void prePersist() {
@@ -111,5 +113,25 @@ public class Usuario extends EntidadeBase {
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
+    }
+
+    public String getPinRecuperacaoHash() {
+        return pinRecuperacaoHash;
+    }
+
+    public void setPinRecuperacaoHash(String pinRecuperacaoHash) {
+        this.pinRecuperacaoHash = pinRecuperacaoHash;
+    }
+
+    public boolean possuiPinRecuperacao() {
+        return pinRecuperacaoHash != null && !pinRecuperacaoHash.isBlank();
+    }
+
+    public long getVersaoCredenciais() {
+        return versaoCredenciais;
+    }
+
+    public void invalidarSessoes() {
+        versaoCredenciais++;
     }
 }

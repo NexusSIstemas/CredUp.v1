@@ -29,6 +29,9 @@ public final class DtosAutenticacao {
                     regexp = "^(?=.*[A-Za-z])(?=.*\\d).{8,}$",
                     message = "A senha deve conter letras e números")
             String senha,
+            @NotBlank
+            @Pattern(regexp = "\\d{6}", message = "O PIN deve conter exatamente 6 números")
+            String pinRecuperacao,
             @Past(message = "Data de nascimento inválida")
             LocalDate dataNascimento) {
     }
@@ -50,10 +53,12 @@ public final class DtosAutenticacao {
 
     public record SolicitacaoRecuperacaoSenha(
             @NotBlank
-            @CPF(message = "CPF inválido")
-            String cpf,
-            @NotBlank String nomeComercio,
-            @NotBlank @Pattern(regexp = "\\d{10,11}") String telefone) {
+            @Email(message = "E-mail inválido") String email,
+            @NotBlank @Pattern(regexp = "\\d{6}", message = "O PIN deve conter exatamente 6 números") String pin,
+            @NotBlank
+            @Size(min = 8, message = "A senha deve ter no mínimo 8 caracteres")
+            @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d).{8,}$", message = "A senha deve conter letras e números")
+            String novaSenha) {
     }
 
     public record RespostaMensagem(
@@ -66,7 +71,9 @@ public final class DtosAutenticacao {
             @Size(min = 8, message = "A senha deve ter no mínimo 8 caracteres")
             @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d).{8,}$",
                     message = "A senha deve conter letras e números")
-            String novaSenha) {
+            String novaSenha,
+            @Pattern(regexp = "^$|\\d{6}", message = "O PIN deve conter exatamente 6 números")
+            String pinRecuperacao) {
     }
 
     public record RespostaSolicitacaoRedefinicao(

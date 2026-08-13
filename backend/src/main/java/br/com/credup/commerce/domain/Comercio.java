@@ -15,7 +15,7 @@ public class Comercio extends EntidadeBase {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "comerciante_id") private Comerciante comerciante;
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false) private StatusComercio status = StatusComercio.PENDING;
+    @Column(nullable = false) private StatusComercio status = StatusComercio.APPROVED;
 
     public String getComercioName() {
         return commerceName;
