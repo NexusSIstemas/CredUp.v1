@@ -3,6 +3,7 @@ package br.com.credup.commerce.application;
 import br.com.credup.commerce.api.DtosComercio.*;
 import br.com.credup.commerce.domain.*;
 import br.com.credup.commerce.repository.RepositorioComercio;
+import br.com.credup.commerce.repository.RepositorioSolicitacaoComercio;
 import br.com.credup.defaults.repository.RepositorioDivida;
 import br.com.credup.audit.domain.RegistroAuditoria;
 import br.com.credup.audit.repository.RepositorioRegistroAuditoria;
@@ -18,14 +19,18 @@ import java.util.*;
 @Service
 public class ServicoComercio {
     private final RepositorioComercio commerces;
+    private final RepositorioSolicitacaoComercio solicitacoes;
     private final RepositorioDivida dividas;
     private final RepositorioRegistroAuditoria registrosAuditoria;
     private final ServicoAssinatura assinaturas;
 
-    public ServicoComercio(RepositorioComercio commerces, RepositorioDivida dividas,
+    public ServicoComercio(RepositorioComercio commerces,
+            RepositorioSolicitacaoComercio solicitacoes,
+            RepositorioDivida dividas,
             RepositorioRegistroAuditoria registrosAuditoria,
             ServicoAssinatura assinaturas) {
         this.commerces = commerces;
+        this.solicitacoes = solicitacoes;
         this.dividas = dividas;
         this.registrosAuditoria = registrosAuditoria;
         this.assinaturas = assinaturas;
@@ -33,10 +38,10 @@ public class ServicoComercio {
 
     @Transactional
     public RespostaComercio create(Usuario current, SolicitacaoCriacaoComercio request) {
-        assinaturas.exigirGerenciamentoComercio(current);
         if (!(current instanceof Comerciante merchant))
             throw new ExcecaoApi(HttpStatus.FORBIDDEN, "Apenas comerciantes podem cadastrar comércio");
-        if (commerces.existsByCnpj(request.cnpj()))
+        if (commerces.existsByCnpj(request.cnpj())
+                || solicitacoes.existsByCnpjAndStatus(request.cnpj(), StatusComercio.PENDING))
             throw new ExcecaoApi(HttpStatus.CONFLICT, "CNPJ já cadastrado");
         var address = new Endereco();
         address.setRoad(request.endereco().rua());
@@ -44,15 +49,16 @@ public class ServicoComercio {
         address.setCep(request.endereco().cep());
         address.setNumberComercio(request.endereco().numberComercio());
         address.setReferencePoint(request.endereco().pontoReferencia());
-        var commerce = new Comercio();
-        commerce.setComercioName(request.nomeComercio());
-        commerce.setCnpj(request.cnpj());
-        commerce.setEndereco(address);
-        commerce.setComerciante(merchant);
-        commerces.save(commerce);
-        registrosAuditoria.save(RegistroAuditoria.of(current, "CRIAR_COMERCIO", "Comercio", commerce.getId(),
-                commerce.getComercioName(), "Cadastrou um novo comércio e o enviou para aprovação"));
-        return map(commerce);
+        var solicitacao = new SolicitacaoComercio();
+        solicitacao.setNomeComercio(request.nomeComercio().trim());
+        solicitacao.setCnpj(request.cnpj());
+        solicitacao.setEndereco(address);
+        solicitacao.setComerciante(merchant);
+        solicitacoes.save(solicitacao);
+        registrosAuditoria.save(RegistroAuditoria.of(current, "SOLICITAR_CADASTRO_COMERCIO",
+                "SolicitacaoComercio", solicitacao.getId(), solicitacao.getNomeComercio(),
+                "Enviou uma solicitação de cadastro de comércio para aprovação"));
+        return map(solicitacao);
     }
 
     @Transactional(readOnly = true)
@@ -62,21 +68,51 @@ public class ServicoComercio {
                 : current instanceof FuncionarioComercio staff
                     ? commerces.findByComercianteId(staff.getResponsavel().getId())
                     : commerces.findByComercianteId(current.getId());
-        return result.stream().map(this::map).toList();
+        var respostas = new ArrayList<>(result.stream().map(this::map).toList());
+        if (status == null || status != StatusComercio.APPROVED) {
+            var pendentes = current.getPerfilAcesso() == PerfilAcesso.ADMIN_REDE
+                    ? (status == null ? solicitacoes.findAll() : solicitacoes.findByStatus(status))
+                    : current instanceof FuncionarioComercio
+                            ? List.<SolicitacaoComercio>of()
+                            : solicitacoes.findByComercianteId(current.getId());
+            respostas.addAll(pendentes.stream()
+                    .filter(item -> status == null || item.getStatus() == status)
+                    .map(this::map)
+                    .toList());
+        }
+        return respostas;
     }
 
     @Transactional
     public RespostaComercio review(Usuario current, UUID id, SolicitacaoRevisao request) {
         if (request.status() == StatusComercio.PENDING)
             throw new ExcecaoApi(HttpStatus.BAD_REQUEST, "A decisão deve ser APPROVED ou REJECTED");
-        var commerce = get(id);
-        commerce.setStatus(request.status());
+        var solicitacao = solicitacoes.findById(id)
+                .orElseThrow(() -> new ExcecaoApi(
+                        HttpStatus.NOT_FOUND,
+                        "Solicitação de comércio não encontrada"));
         if (request.status() == StatusComercio.APPROVED) {
+            if (commerces.existsByCnpj(solicitacao.getCnpj()))
+                throw new ExcecaoApi(HttpStatus.CONFLICT, "CNPJ já cadastrado");
+            var commerce = new Comercio();
+            commerce.setComercioName(solicitacao.getNomeComercio());
+            commerce.setCnpj(solicitacao.getCnpj());
+            commerce.setEndereco(solicitacao.getEndereco());
+            commerce.setComerciante(solicitacao.getComerciante());
+            commerce.setStatus(StatusComercio.APPROVED);
+            commerces.save(commerce);
+            solicitacoes.delete(solicitacao);
             assinaturas.liberarPagamento(commerce.getComerciante());
+            registrosAuditoria.save(RegistroAuditoria.of(current, "APROVAR_CADASTRO_COMERCIO",
+                    "Comercio", commerce.getId(), commerce.getComercioName(),
+                    "Aprovou a solicitação e criou o comércio na rede"));
+            return map(commerce);
         }
-        registrosAuditoria.save(RegistroAuditoria.of(current, "REVISAR_COMERCIO", "Comercio", commerce.getId(),
-                commerce.getComercioName(), "Alterou a situação do comércio para " + request.status()));
-        return map(commerce);
+        solicitacao.setStatus(StatusComercio.REJECTED);
+        registrosAuditoria.save(RegistroAuditoria.of(current, "REJEITAR_CADASTRO_COMERCIO",
+                "SolicitacaoComercio", solicitacao.getId(), solicitacao.getNomeComercio(),
+                "Rejeitou a solicitação de cadastro do comércio"));
+        return map(solicitacao);
     }
 
     @Transactional
@@ -143,5 +179,17 @@ public class ServicoComercio {
         return new RespostaComercio(c.getId(), c.getComercioName(), c.getCnpj(),
                 new SolicitacaoEndereco(a.getRoad(), a.getCity(), a.getCep(), a.getNumberComercio(), a.getReferencePoint()),
                 c.getComerciante().getId(), c.getStatus());
+    }
+
+    private RespostaComercio map(SolicitacaoComercio solicitacao) {
+        var endereco = solicitacao.getEndereco();
+        return new RespostaComercio(
+                solicitacao.getId(),
+                solicitacao.getNomeComercio(),
+                solicitacao.getCnpj(),
+                new SolicitacaoEndereco(endereco.getRoad(), endereco.getCity(), endereco.getCep(),
+                        endereco.getNumberComercio(), endereco.getReferencePoint()),
+                solicitacao.getComerciante().getId(),
+                solicitacao.getStatus());
     }
 }

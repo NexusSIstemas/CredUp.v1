@@ -7,6 +7,7 @@ import br.com.credup.identity.domain.Usuario;
 import br.com.credup.identity.repository.RepositorioUsuario;
 import br.com.credup.shared.exception.ExcecaoApi;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
@@ -15,10 +16,24 @@ import java.time.LocalDate;
 public class ServicoPerfil {
     private final RepositorioUsuario users;
     private final RepositorioRegistroAuditoria auditLogs;
+    private final PasswordEncoder codificador;
 
-    public ServicoPerfil(RepositorioUsuario users, RepositorioRegistroAuditoria auditLogs) {
+    public ServicoPerfil(RepositorioUsuario users, RepositorioRegistroAuditoria auditLogs,
+            PasswordEncoder codificador) {
         this.users = users;
         this.auditLogs = auditLogs;
+        this.codificador = codificador;
+    }
+
+    @Transactional
+    public RespostaPerfil configurarPin(Usuario current, SolicitacaoPinRecuperacao request) {
+        var user = findCurrent(current);
+        if (!codificador.matches(request.senhaAtual(), user.getSenha()))
+            throw new ExcecaoApi(HttpStatus.UNAUTHORIZED, "Senha atual inválida");
+        user.setPinRecuperacaoHash(codificador.encode(request.pin()));
+        auditLogs.save(RegistroAuditoria.of(user, "UPDATE_RECOVERY_PIN", "Usuario", user.getId(),
+                user.getName() + " " + user.getSurname(), "Configurou um novo PIN de recuperação"));
+        return map(user);
     }
 
     @Transactional
@@ -58,7 +73,8 @@ public class ServicoPerfil {
     private RespostaPerfil map(Usuario user) {
         return new RespostaPerfil(user.getId(), user.getName(), user.getSurname(),
                 mascararTelefone(user.getTelephone()), mascararCpf(user.getCpf()),
-                mascararEmail(user.getEmail()), user.getDateBirth(), user.getPerfilAcesso());
+                mascararEmail(user.getEmail()), user.getDateBirth(), user.getPerfilAcesso(),
+                user.possuiPinRecuperacao());
     }
 
     private void validarMaioridade(LocalDate dataNascimento) {

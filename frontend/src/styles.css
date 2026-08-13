@@ -122,6 +122,9 @@ input:focus,select:focus,textarea:focus { border-color:#21835b; box-shadow:0 0 0
 .cartao-redefinicao { width:min(480px,100%); padding:2rem; border:1px solid #dfe7e2; border-radius:16px; background:#fff; box-shadow:0 18px 50px #173c2918; }
 .cartao-redefinicao .marca { margin-bottom:2.5rem; }
 .cartao-redefinicao form>button { width:100%; margin-top:1rem; }
+.aviso-pin { margin:1rem 0; padding:1rem; border:2px solid #d97706; border-radius:14px; background:#fff7ed; color:#7c2d12; }
+.aviso-pin strong { display:block; font-size:1rem; text-transform:uppercase; }
+.aviso-pin p { margin:.4rem 0 0; line-height:1.45; }
 .rotulo-marcacao { display:flex; grid-template-columns:auto 1fr; align-items:center; }
 .rotulo-marcacao input { width:auto; }
 .estrutura-aplicacao { min-height:100vh; display:grid; grid-template-columns:240px 1fr; }

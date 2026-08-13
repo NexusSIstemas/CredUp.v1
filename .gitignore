@@ -12,4 +12,5 @@ frontend/dist/
 *.log
 backups/
 midias-credup/
+output/pdf/
 .DS_Store

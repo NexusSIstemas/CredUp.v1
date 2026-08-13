@@ -2,6 +2,7 @@ package br.com.credup.auth.application;
 
 import br.com.credup.auth.api.DtosAutenticacao.*;
 import br.com.credup.identity.domain.Comerciante;
+import br.com.credup.identity.domain.Usuario;
 import br.com.credup.identity.repository.*;
 import br.com.credup.auth.domain.SolicitacaoRedefinicaoSenha;
 import br.com.credup.auth.repository.RepositorioSolicitacaoRedefinicaoSenha;
@@ -61,6 +62,7 @@ public class ServicoAutenticacao {
         merchant.setCpf(request.cpf());
         merchant.setEmail(request.email().toLowerCase());
         merchant.setSenha(codificador.encode(request.senha()));
+        merchant.setPinRecuperacaoHash(codificador.encode(request.pinRecuperacao()));
         merchant.setDateBirth(request.dataNascimento());
         merchant.setPerfilAcesso(PerfilAcesso.MERCHANT_OWNER);
         merchants.save(merchant);
@@ -86,20 +88,16 @@ public class ServicoAutenticacao {
 
     @Transactional
     public RespostaMensagem solicitarRedefinicao(SolicitacaoRecuperacaoSenha request) {
-        users.findByCpfAndTelephone(request.cpf(), request.telefone()).stream()
-                .flatMap(user -> commerces.findByCommerceNameIgnoreCaseAndComercianteId(
-                                request.nomeComercio().trim(), user.getId())
-                        .map(commerce -> Map.entry(user, commerce)).stream())
-                .findFirst()
-                .ifPresent(match -> {
-                    if (!solicitacoesRedefinicao.existsByUsuarioIdAndStatus(match.getKey().getId(), StatusRedefinicaoSenha.PENDING)) {
-                        var reset = new SolicitacaoRedefinicaoSenha();
-                        reset.setUsuario(match.getKey());
-                        reset.setComercioName(match.getValue().getComercioName());
-                        solicitacoesRedefinicao.save(reset);
-                    }
-                });
-        return new RespostaMensagem("Se os dados estiverem corretos, a solicitação será enviada ao administrador.");
+        var user = users.findByEmailIgnoreCase(request.email())
+                .filter(Usuario::possuiPinRecuperacao)
+                .filter(found -> codificador.matches(request.pin(), found.getPinRecuperacaoHash()))
+                .orElseThrow(() -> new ExcecaoApi(HttpStatus.UNAUTHORIZED,
+                        "Não foi possível confirmar os dados de recuperação"));
+        user.setSenha(codificador.encode(request.novaSenha()));
+        user.setDeveAlterarSenha(false);
+        user.invalidarSessoes();
+        users.save(user);
+        return new RespostaMensagem("Senha redefinida. Entre novamente usando a nova senha.");
     }
 
     @Transactional(readOnly = true)
@@ -135,7 +133,10 @@ public class ServicoAutenticacao {
         if (!codificador.matches(request.senhaAtual(), user.getSenha()))
             throw new ExcecaoApi(HttpStatus.UNAUTHORIZED, "Senha temporária inválida");
         user.setSenha(codificador.encode(request.novaSenha()));
+        if (request.pinRecuperacao() != null && !request.pinRecuperacao().isBlank())
+            user.setPinRecuperacaoHash(codificador.encode(request.pinRecuperacao()));
         user.setDeveAlterarSenha(false);
+        user.invalidarSessoes();
         users.save(user);
         return response(user);
     }

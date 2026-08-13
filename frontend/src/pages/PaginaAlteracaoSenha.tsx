@@ -27,7 +27,8 @@ export function PaginaAlteracaoSenha({ onChanged, onLogout }: {
         method: 'POST',
         body: JSON.stringify({
           senhaAtual: form.get('senhaAtual'),
-          novaSenha: form.get('novaSenha')
+          novaSenha: form.get('novaSenha'),
+          pinRecuperacao: form.get('pinRecuperacao')
         })
       })
       onChanged(sessao)
@@ -52,6 +53,8 @@ export function PaginaAlteracaoSenha({ onChanged, onLogout }: {
         <CampoFlutuante label="Nova senha"><input name="novaSenha" type={show ? 'text' : 'password'} placeholder=" " minLength={8}
           pattern="(?=.*[A-Za-z])(?=.*\d).{8,}" title="Use pelo menos 8 caracteres, com letras e números." required /></CampoFlutuante>
         <CampoFlutuante label="Confirmar nova senha"><input name="confirmacao" type={show ? 'text' : 'password'} placeholder=" " required /></CampoFlutuante>
+        <CampoFlutuante label="PIN de recuperação (6 números)"><input name="pinRecuperacao" type={show ? 'text' : 'password'} inputMode="numeric" minLength={6} maxLength={6} pattern="\d{6}" placeholder=" " required onInput={event => { event.currentTarget.value = event.currentTarget.value.replace(/\D/g, '').slice(0, 6) }} /></CampoFlutuante>
+        <div className="aviso-pin"><strong>⚠ Guarde seu PIN em um local seguro</strong><p>Ele não será mostrado novamente e será necessário para recuperar sua conta caso você esqueça a senha.</p></div>
         <label className="rotulo-marcacao"><input type="checkbox" checked={show} onChange={e => setShow(e.target.checked)} /> Mostrar senhas</label>
         <small className="dica-senha">Use no mínimo 8 caracteres, com letras e números.</small>
         <button disabled={loading}>{loading ? 'Salvando…' : 'Salvar nova senha'}</button>

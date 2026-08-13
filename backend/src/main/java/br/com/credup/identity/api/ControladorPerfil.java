@@ -25,4 +25,11 @@ public class ControladorPerfil {
             @Valid @RequestBody SolicitacaoAtualizacaoPerfil request) {
         return service.update(user, request);
     }
+
+
+    @PutMapping("/recovery-pin")
+    RespostaPerfil configurarPin(@AuthenticationPrincipal Usuario user,
+            @Valid @RequestBody SolicitacaoPinRecuperacao request) {
+        return service.configurarPin(user, request);
+    }
 }

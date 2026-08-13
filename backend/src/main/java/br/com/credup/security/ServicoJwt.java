@@ -27,6 +27,7 @@ public class ServicoJwt {
                 .subject(user.getEmail())
                 .claim("role", user.getPerfilAcesso().name())
                 .claim("userId", user.getId().toString())
+                .claim("credentialVersion", user.getVersaoCredenciais())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(Duration.ofMinutes(expirationMinutes))))
                 .signWith(key)
@@ -35,5 +36,11 @@ public class ServicoJwt {
 
     public String subject(String token) {
         return Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload().getSubject();
+    }
+
+    public boolean belongsToCurrentSession(String token, Usuario user) {
+        Number version = Jwts.parser().verifyWith(key).build().parseSignedClaims(token)
+                .getPayload().get("credentialVersion", Number.class);
+        return version != null && version.longValue() == user.getVersaoCredenciais();
     }
 }

@@ -17,7 +17,14 @@ public final class DtosPerfil {
             String cpfMascarado,
             String emailMascarado,
             LocalDate dataNascimento,
-            PerfilAcesso perfilAcesso) {
+            PerfilAcesso perfilAcesso,
+            boolean pinRecuperacaoConfigurado) {
+    }
+
+
+    public record SolicitacaoPinRecuperacao(
+            @NotBlank String senhaAtual,
+            @NotBlank @Pattern(regexp = "\\d{6}", message = "O PIN deve conter exatamente 6 números") String pin) {
     }
 
     public record SolicitacaoAtualizacaoPerfil(

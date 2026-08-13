@@ -63,6 +63,7 @@ export interface Perfil {
   emailMascarado: string
   dataNascimento: string | null
   perfilAcesso: PerfilAcesso
+  pinRecuperacaoConfigurado: boolean
 }
 
 export interface Funcionario {
