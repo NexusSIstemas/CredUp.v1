@@ -3,6 +3,7 @@ package br.com.credup.identity.application;
 import br.com.credup.audit.domain.RegistroAuditoria;
 import br.com.credup.audit.repository.RepositorioRegistroAuditoria;
 import br.com.credup.billing.application.ServicoAssinatura;
+import br.com.credup.auth.application.ServicoSessaoAtualizacao;
 import br.com.credup.identity.api.DtosFuncionario.*;
 import br.com.credup.identity.domain.*;
 import br.com.credup.identity.repository.*;
@@ -26,16 +27,19 @@ public class ServicoFuncionario {
     private final PasswordEncoder codificador;
     private final RepositorioRegistroAuditoria auditLogs;
     private final ServicoAssinatura assinaturas;
+    private final ServicoSessaoAtualizacao sessoesAtualizacao;
 
     public ServicoFuncionario(RepositorioUsuario users, RepositorioComerciante merchants,
             RepositorioFuncionarioComercio staffRepository, PasswordEncoder codificador,
-            RepositorioRegistroAuditoria auditLogs, ServicoAssinatura assinaturas) {
+            RepositorioRegistroAuditoria auditLogs, ServicoAssinatura assinaturas,
+            ServicoSessaoAtualizacao sessoesAtualizacao) {
         this.users = users;
         this.merchants = merchants;
         this.staffRepository = staffRepository;
         this.codificador = codificador;
         this.auditLogs = auditLogs;
         this.assinaturas = assinaturas;
+        this.sessoesAtualizacao = sessoesAtualizacao;
     }
 
     @Transactional
@@ -97,6 +101,8 @@ public class ServicoFuncionario {
         employee.setSenha(codificador.encode(senha));
         employee.setDeveAlterarSenha(true);
         employee.setEnabled(true);
+        employee.invalidarSessoes();
+        sessoesAtualizacao.revogarTodas(employee);
         auditLogs.save(RegistroAuditoria.of(owner, "RESET_STAFF_PASSWORD", "FuncionarioComercio", employee.getId(),
                 employee.getName() + " " + employee.getSurname(),
                 "Gerou uma nova senha temporária para o funcionário"));

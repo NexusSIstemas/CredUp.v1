@@ -1,18 +1,33 @@
 package br.com.credup.defaults.api;
 
-import br.com.credup.defaults.api.DtosInadimplencia.*;
+import java.math.BigDecimal;
+import java.util.UUID;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import br.com.credup.defaults.api.DtosInadimplencia.DetalhesCliente;
+import br.com.credup.defaults.api.DtosInadimplencia.RespostaDivida;
+import br.com.credup.defaults.api.DtosInadimplencia.SolicitacaoBuscaRede;
+import br.com.credup.defaults.api.DtosInadimplencia.SolicitacaoCriacaoDivida;
 import br.com.credup.defaults.application.ServicoInadimplencia;
 import br.com.credup.identity.domain.Usuario;
 import br.com.credup.shared.domain.StatusDivida;
 import jakarta.validation.Valid;
-import org.springframework.data.domain.*;
-import org.springframework.data.web.PageableDefault;
-import org.springframework.http.*;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
-import java.math.BigDecimal;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api")
@@ -24,7 +39,7 @@ public class ControladorInadimplencia {
     }
 
     @PostMapping("/debts")
-    @PreAuthorize("hasRole('MERCHANT_OWNER')")
+    @PreAuthorize("hasAnyRole('MERCHANT_OWNER', 'MERCHANT_STAFF')")
     ResponseEntity<RespostaDivida> create(@AuthenticationPrincipal Usuario user,
                                         @Valid @RequestBody SolicitacaoCriacaoDivida request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.create(user, request));

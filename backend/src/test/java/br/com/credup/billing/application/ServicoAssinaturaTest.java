@@ -2,6 +2,7 @@ package br.com.credup.billing.application;
 
 import br.com.credup.audit.repository.RepositorioRegistroAuditoria;
 import br.com.credup.billing.domain.Assinatura;
+import br.com.credup.billing.domain.ConfiguracaoSistema;
 import br.com.credup.billing.domain.PlanoAssinatura;
 import br.com.credup.billing.domain.StatusAssinatura;
 import br.com.credup.billing.repository.RepositorioAssinatura;
@@ -90,9 +91,13 @@ class ServicoAssinaturaTest {
 
         when(repositorio.findByComercianteId(comerciante.getId()))
                 .thenReturn(Optional.of(assinatura));
+        var configuracao = mock(ConfiguracaoSistema.class);
+        when(configuracao.getDiasToleranciaPagamento()).thenReturn(3);
+        var configuracoes = mock(ServicoConfiguracaoSistema.class);
+        when(configuracoes.obter()).thenReturn(configuracao);
 
         return new Cenario(
-                new ServicoAssinatura(repositorio, auditoria),
+                new ServicoAssinatura(repositorio, auditoria, configuracoes),
                 comerciante,
                 assinatura);
     }

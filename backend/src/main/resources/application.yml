@@ -19,14 +19,15 @@ server:
 app:
   jwt:
     secret: ${JWT_SECRET:change-this-development-secret-with-at-least-32-bytes}
-    expiration-minutes: ${JWT_EXPIRATION_MINUTES:480}
+    expiration-minutes: ${JWT_EXPIRATION_MINUTES:15}
+    refresh-expiration-hours: ${JWT_REFRESH_EXPIRATION_HOURS:8}
+    refresh-cookie-secure: ${JWT_REFRESH_COOKIE_SECURE:false}
   cors:
     allowed-origin: ${CORS_ALLOWED_ORIGIN:http://localhost:5173}
   pix:
     mercado-pago:
       ambiente: ${MERCADO_PAGO_AMBIENTE:sandbox}
       access-token: ${MERCADO_PAGO_ACCESS_TOKEN:}
-      valor-mensal: ${PIX_VALOR_MENSAL:39.90}
       expiracao-segundos: ${MERCADO_PAGO_PIX_EXPIRACAO_SEGUNDOS:3600}
       api-url: ${MERCADO_PAGO_API_URL:https://api.mercadopago.com}
       webhook-secret: ${MERCADO_PAGO_WEBHOOK_SECRET:}

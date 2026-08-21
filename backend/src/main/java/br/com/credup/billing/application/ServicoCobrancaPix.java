@@ -30,9 +30,9 @@ public class ServicoCobrancaPix {
     private static final String CAMINHO_ORDENS = "/v1/orders";
 
     private final ServicoAssinatura assinaturas;
+    private final ServicoConfiguracaoSistema configuracoes;
     private final RestClient http;
     private final String accessToken;
-    private final BigDecimal valorMensal;
     private final int expiracaoSegundos;
     private final String apiUrl;
     private final String webhookSecret;
@@ -40,17 +40,17 @@ public class ServicoCobrancaPix {
 
     public ServicoCobrancaPix(
             ServicoAssinatura assinaturas,
+            ServicoConfiguracaoSistema configuracoes,
             RestClient.Builder construtorHttp,
             @Value("${app.pix.mercado-pago.ambiente}") String ambiente,
             @Value("${app.pix.mercado-pago.access-token}") String accessToken,
-            @Value("${app.pix.mercado-pago.valor-mensal}") BigDecimal valorMensal,
             @Value("${app.pix.mercado-pago.expiracao-segundos}") int expiracaoSegundos,
             @Value("${app.pix.mercado-pago.api-url}") String apiUrl,
             @Value("${app.pix.mercado-pago.webhook-secret}") String webhookSecret) {
         this.assinaturas = assinaturas;
+        this.configuracoes = configuracoes;
         this.http = construtorHttp.build();
         this.accessToken = accessToken;
-        this.valorMensal = valorMensal.setScale(2);
         this.expiracaoSegundos = expiracaoSegundos;
         this.apiUrl = removerBarraFinal(apiUrl);
         this.webhookSecret = webhookSecret;
@@ -60,6 +60,7 @@ public class ServicoCobrancaPix {
 
     public RespostaCobrancaPix gerar(Usuario usuario) {
         validarConfiguracao();
+        BigDecimal valorMensal = configuracoes.obter().getValorMensal();
         String referenciaExterna = "CREDUP-" + UUID.randomUUID();
         JsonNode resposta = criarOrdem(usuario, referenciaExterna);
         String idOrdem = textoObrigatorio(resposta, "id", "identificador da cobrança");
@@ -169,7 +170,7 @@ public class ServicoCobrancaPix {
         Map<String, Object> corpo = Map.of(
                 "type", "online",
                 "external_reference", referenciaExterna,
-                "total_amount", valorMensal.toPlainString(),
+                "total_amount", valorMensal().toPlainString(),
                 "payer", Map.of(
                         "email", ambienteTeste
                                 ? "test_user_br@testuser.com"
@@ -177,7 +178,7 @@ public class ServicoCobrancaPix {
                         "first_name", ambienteTeste ? "APRO" : usuario.getName()),
                 "transactions", Map.of(
                         "payments", new Object[]{Map.of(
-                                "amount", valorMensal.toPlainString(),
+                                "amount", valorMensal().toPlainString(),
                                 "payment_method", Map.of(
                                         "id", "pix",
                                         "type", "bank_transfer"))}));
@@ -272,7 +273,7 @@ public class ServicoCobrancaPix {
                     HttpStatus.BAD_GATEWAY,
                     "A cobrança retornada pelo Mercado Pago não corresponde à solicitação");
         }
-        validarValor(ordem.path("total_amount"), valorMensal);
+        validarValor(ordem.path("total_amount"), valorMensal());
         JsonNode pagamento = primeiroPagamento(ordem);
         if (!"pix".equalsIgnoreCase(pagamento.path("payment_method").path("id").asText())) {
             throw new ExcecaoApi(
@@ -343,6 +344,10 @@ public class ServicoCobrancaPix {
                     HttpStatus.SERVICE_UNAVAILABLE,
                     "Configure um Access Token de teste do Mercado Pago");
         }
+    }
+
+    private BigDecimal valorMensal() {
+        return configuracoes.obter().getValorMensal();
     }
 
     private void validarIdOrdem(String idOrdem) {

@@ -4,6 +4,12 @@ export type StatusDivida = 'PENDING' | 'DISPUTED' | 'NEGOTIATING' | 'PARTIALLY_P
 export type PlanoAssinatura = 'PROFISSIONAL'
 export type StatusAssinatura = 'AGUARDANDO_APROVACAO' | 'AGUARDANDO_PAGAMENTO' | 'ATIVA' | 'ATRASADA' | 'EXPIRADA' | 'CANCELADA'
 
+export interface ConfiguracaoPublica {
+  nomePlano: string
+  valorMensal: number
+  diasToleranciaPagamento: number
+}
+
 export interface Assinatura {
   id: string
   idComerciante: string

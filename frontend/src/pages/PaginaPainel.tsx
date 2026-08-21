@@ -6,149 +6,41 @@ import {
   type TomAlerta
 } from '../services/alertas'
 import { CampoFlutuante } from '../components/CampoFlutuante'
-import type { Assinatura, CobrancaPix, StatusCobrancaPix, Comercio, StatusComercio, Divida, StatusDivida, Funcionario, Pagina, SolicitacaoRedefinicaoSenha, Perfil, PerfilAcesso, RegistroAuditoria, Sessao } from '../types'
-
-type Secao = 'overview' | 'commerces' | 'defaults' | 'staff' | 'recovery' | 'auditoria' | 'assinatura' | 'perfil'
-
-const roleLabels: Record<PerfilAcesso, string> = {
-  ADMIN_REDE: 'Administrador da rede',
-  MERCHANT_OWNER: 'Dono de comércio',
-  MERCHANT_STAFF: 'Funcionário do comércio'
-}
-const commerceStatusLabels: Record<StatusComercio, string> = {
-  PENDING: 'Pendente',
-  APPROVED: 'Aprovado',
-  REJECTED: 'Reprovado'
-}
-const debtStatusLabels: Record<StatusDivida, string> = {
-  PENDING: 'Pendente',
-  DISPUTED: 'Contestado',
-  NEGOTIATING: 'Em negociação',
-  PARTIALLY_PAID: 'Parcialmente pago',
-  PAID: 'Pago',
-  CANCELED: 'Cancelado'
-}
-
-const actionLabels: Record<string, string> = {
-  VIEW_FULL_CPF: 'Consultou os dados de um cliente',
-  VIEW_OWN_PROFILE: 'Visualizou o próprio perfil',
-  UPDATE_OWN_PROFILE: 'Atualizou o próprio perfil',
-  CREATE_STAFF: 'Criou um funcionário',
-  ENABLE_STAFF: 'Reativou um funcionário',
-  DISABLE_STAFF: 'Bloqueou um funcionário',
-  RESET_STAFF_PASSWORD: 'Redefiniu a senha de um funcionário',
-  DELETE_STAFF: 'Excluiu um funcionário',
-  CRIAR_DIVIDA: 'Cadastrou uma dívida',
-  DAR_BAIXA_DIVIDA: 'Deu baixa em uma dívida',
-  CRIAR_COMERCIO: 'Cadastrou um comércio',
-  REVISAR_COMERCIO: 'Revisou um comércio',
-  EDITAR_COMERCIO: 'Editou um comércio',
-  EXCLUIR_COMERCIO: 'Excluiu um comércio',
-  GERAR_RELATORIO_INADIMPLENCIAS: 'Gerou um relatório de inadimplências',
-  SOLICITAR_ATIVACAO_ASSINATURA: 'Solicitou a ativação da assinatura',
-  ATIVAR_ASSINATURA: 'Ativou uma assinatura',
-  RENOVAR_ASSINATURA: 'Renovou uma assinatura',
-  CANCELAR_ASSINATURA: 'Cancelou uma assinatura'
-}
-
-const subscriptionStatusLabels = {
-  AGUARDANDO_APROVACAO: 'Aguardando aprovação',
-  AGUARDANDO_PAGAMENTO: 'Aguardando pagamento',
-  ATIVA: 'Ativa',
-  ATRASADA: 'Pagamento pendente',
-  EXPIRADA: 'Teste encerrado',
-  CANCELADA: 'Cancelada'
-} as const
-
-const describeAuditAction = (record: RegistroAuditoria) => {
-  if (record.acao === 'DAR_BAIXA_DIVIDA' && record.alvoDescricao) {
-    return `Deu baixa na dívida de ${record.alvoDescricao}`
-  }
-  if (record.acao === 'CRIAR_DIVIDA' && record.alvoDescricao) {
-    return `Cadastrou uma dívida para ${record.alvoDescricao}`
-  }
-  return actionLabels[record.acao] ?? record.acao
-}
-
-const classesStatusComercio: Record<StatusComercio, string> = {
-  PENDING: 'pendente',
-  APPROVED: 'aprovado',
-  REJECTED: 'rejeitado'
-}
-
-const classesStatusDivida: Record<StatusDivida, string> = {
-  PENDING: 'pendente',
-  DISPUTED: 'contestado',
-  NEGOTIATING: 'negociando',
-  PARTIALLY_PAID: 'parcialmente-pago',
-  PAID: 'pago',
-  CANCELED: 'cancelado'
-}
-
-const digits = (value: FormDataEntryValue | null) => String(value ?? '').replace(/\D/g, '')
-const cpfMask = (value: string) => value.replace(/\D/g, '').slice(0, 11)
-  .replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2')
-const phoneMask = (value: string) => {
-  const number = value.replace(/\D/g, '').slice(0, 11)
-  return number.length <= 10
-    ? number.replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{4})(\d)/, '$1-$2')
-    : number.replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2')
-}
-const cnpjMask = (value: string) => value.replace(/\D/g, '').slice(0, 14)
-  .replace(/(\d{2})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2')
-  .replace(/(\d{3})(\d)/, '$1/$2').replace(/(\d{4})(\d{1,2})$/, '$1-$2')
-const cepMask = (value: string) => value.replace(/\D/g, '').slice(0, 8)
-  .replace(/(\d{5})(\d)/, '$1-$2')
-const currencyMask = (value: string) => {
-  const number = value.replace(/\D/g, '')
-  if (!number) return ''
-  return (Number(number) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
-const currencyValue = (value: FormDataEntryValue | null) => {
-  const number = String(value ?? '').replace(/\D/g, '')
-  return number ? Number(number) / 100 : 0
-}
-
-const limitDateYear = (input: HTMLInputElement) => {
-  const [year, month, day] = input.value.split('-')
-
-  if (year.length <= 4) {
-    return
-  }
-
-  input.value = [
-    year.slice(0, 4),
-    month,
-    day
-  ]
-    .filter(Boolean)
-    .join('-')
-}
-
-const currentDate = () => {
-  const today = new Date()
-  const timezoneOffset = today.getTimezoneOffset() * 60_000
-
-  return new Date(today.getTime() - timezoneOffset)
-    .toISOString()
-    .slice(0, 10)
-}
-
-const maximumBirthDate = () => {
-  const date = new Date()
-  date.setFullYear(date.getFullYear() - 18)
-  const timezoneOffset = date.getTimezoneOffset() * 60_000
-  return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 10)
-}
-
-const displayCnpj = (value: string) => cnpjMask(value)
+import type { Assinatura, CobrancaPix, StatusCobrancaPix, Comercio, ConfiguracaoPublica, Divida, Funcionario, Pagina, SolicitacaoRedefinicaoSenha, Perfil, RegistroAuditoria, Sessao } from '../types'
+import {
+  CLASSES_STATUS_COMERCIO,
+  CLASSES_STATUS_DIVIDA,
+  ROTULOS_PERFIL,
+  ROTULOS_STATUS_ASSINATURA,
+  ROTULOS_STATUS_COMERCIO,
+  ROTULOS_STATUS_DIVIDA,
+  descreverAcaoAuditoria,
+  type SecaoPainel
+} from './painel/constantes'
+import {
+  dataAtual,
+  dataMaximaNascimento,
+  limitarAnoData,
+  mascararCep,
+  mascararCnpj,
+  mascararCpf,
+  mascararMoeda,
+  mascararTelefone,
+  obterValorMoeda,
+  somenteDigitos
+} from './painel/formatadores'
+import { SecaoAuditoria } from './painel/secoes/SecaoAuditoria'
+import { SecaoRecuperacao } from './painel/secoes/SecaoRecuperacao'
+import { SecaoVisaoGeral } from './painel/secoes/SecaoVisaoGeral'
+import { SecaoFuncionarios } from './painel/secoes/SecaoFuncionarios'
+import { BarraLateralPainel, CabecalhoPainel } from './painel/NavegacaoPainel'
 
 export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   sessao: Sessao
   onSessaoChange: (sessao: Sessao) => void
   onLogout: () => void
 }) {
-  const [section, setSecao] = useState<Secao>('overview')
+  const [section, setSecao] = useState<SecaoPainel>('overview')
   const [privacyVisible, setPrivacyVisible] = useState(false)
   const [commerces, setComercios] = useState<Comercio[]>([])
   const [commercesLoaded, setComerciosCarregados] = useState(false)
@@ -170,6 +62,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   const [subscriptionLoaded, setAssinaturaCarregada] = useState(false)
   const [pixCharge, setCobrancaPix] = useState<CobrancaPix | null>(null)
   const [pixLoading, setPixCarregando] = useState(false)
+  const [systemConfig, setConfiguracaoSistema] = useState<ConfiguracaoPublica | null>(null)
   const admin = sessao.perfilAcesso === 'ADMIN_REDE'
   const owner = sessao.perfilAcesso === 'MERCHANT_OWNER'
   const staff = sessao.perfilAcesso === 'MERCHANT_STAFF'
@@ -210,9 +103,13 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   const loadSubscriptions = () => api<Assinatura[]>('/assinaturas')
     .then(setAssinaturas)
     .catch(showError)
+  const loadSystemConfig = () => api<ConfiguracaoPublica>('/configuracoes/publicas')
+    .then(setConfiguracaoSistema)
+    .catch(showError)
 
   useEffect(() => {
-    if (!staff) loadComercios()
+    loadSystemConfig()
+    loadComercios()
     if (admin) {
       loadResets()
       loadSubscriptions()
@@ -327,9 +224,9 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
         method: 'POST',
         body: JSON.stringify({
           nomeComercio: form.get('nomeComercio'),
-          cnpj: digits(form.get('cnpj')),
+          cnpj: somenteDigitos(form.get('cnpj')),
           endereco: {
-            rua: form.get('rua'), cidade: form.get('cidade'), cep: digits(form.get('cep')),
+            rua: form.get('rua'), cidade: form.get('cidade'), cep: somenteDigitos(form.get('cep')),
             numberComercio: form.get('numberComercio'), pontoReferencia: form.get('pontoReferencia')
           }
         })
@@ -352,7 +249,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
           endereco: {
             rua: form.get('rua'),
             cidade: form.get('cidade'),
-            cep: digits(form.get('cep')),
+            cep: somenteDigitos(form.get('cep')),
             numberComercio: form.get('numberComercio'),
             pontoReferencia: form.get('pontoReferencia')
           }
@@ -395,7 +292,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
     event.preventDefault()
     const formElement = event.currentTarget
     const form = new FormData(formElement)
-    const valorDivida = currencyValue(form.get('valorDivida'))
+    const valorDivida = obterValorMoeda(form.get('valorDivida'))
     if (valorDivida <= 0) {
       showAlert('Informe um valor de dívida maior que zero.', 'alerta')
       return
@@ -408,8 +305,8 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
           dataDivida: form.get('dataDivida'), descricao: form.get('descricao'), possuiJuros: false,
           cliente: {
             nome: form.get('nome'), sobrenome: form.get('sobrenome'), apelido: form.get('apelido'),
-            cpf: digits(form.get('cpf')),
-            telefone: digits(form.get('telefone')), residencia: form.get('residencia')
+            cpf: somenteDigitos(form.get('cpf')),
+            telefone: somenteDigitos(form.get('telefone')), residencia: form.get('residencia')
           }
         })
       })
@@ -453,7 +350,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
         body: JSON.stringify({
           nome: form.get('nome'),
           sobrenome: form.get('sobrenome'),
-          telefone: digits(form.get('telefone')),
+          telefone: somenteDigitos(form.get('telefone')),
           email: form.get('email'),
           dataNascimento: form.get('dataNascimento') || null
         })
@@ -492,7 +389,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
         method: 'POST',
         body: JSON.stringify({
           nome: form.get('nome'), sobrenome: form.get('sobrenome'),
-          telefone: digits(form.get('telefone')), cpf: digits(form.get('cpf')),
+          telefone: somenteDigitos(form.get('telefone')), cpf: somenteDigitos(form.get('cpf')),
           email: form.get('email'),
           dataNascimento: form.get('dataNascimento') || null
         })
@@ -567,8 +464,6 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
     }
   }
 
-  const openDividas = debts.filter(debt => debt.status !== 'PAID' && debt.status !== 'CANCELED')
-  const openValue = openDividas.reduce((sum, debt) => sum + debt.valorDivida, 0)
   const filteredSubscriptions = subscriptions
     .filter(item => subscriptionStatus === 'TODAS' || item.status === subscriptionStatus)
     .filter(item => `${item.nomeComerciante} ${item.emailMascarado}`
@@ -577,70 +472,53 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
     .sort((first, second) => Number(Boolean(second.solicitacaoAtivacaoEm)) - Number(Boolean(first.solicitacaoAtivacaoEm)))
 
   return <div className="estrutura-aplicacao">
-    <aside>
-      <a className="marca" href="#"><span>C</span> CredUp</a>
-      <div className="mensagem-lateral">
-        <small>Ambiente protegido</small>
-        <p>Gestão colaborativa para decisões de crédito mais seguras.</p>
-      </div>
-      {!staff && <button className={`botao-assinatura-lateral ${section === 'assinatura' ? 'ativo' : ''}`} onClick={() => openSecao('assinatura')}>
-        <span className="icone-assinatura-lateral">A</span>
-        <span><strong>{admin ? 'Assinaturas' : 'Minha assinatura'}</strong><small>{admin ? 'Gerenciar planos' : subscription ? subscriptionStatusLabels[subscription.status] : 'Ver meu plano'}</small></span>
-      </button>}
-      <button className="perfil botao-perfil" onClick={() => openSecao('perfil')}><div className="avatar">{(perfil?.nome ?? sessao.nome)[0]}</div><div><strong>{perfil?.nome ?? sessao.nome}</strong><small>{roleLabels[sessao.perfilAcesso]}</small></div></button>
-      <button className="fantasma" onClick={onLogout}>Sair</button>
-    </aside>
-
+    <BarraLateralPainel
+      sessao={sessao}
+      perfil={perfil}
+      assinatura={subscription}
+      secao={section}
+      quantidadeRecuperacoes={resetRequests.length}
+      dadosVisiveis={privacyVisible}
+      administrador={admin}
+      dono={owner}
+      funcionario={staff}
+      abrirSecao={openSecao}
+      alternarPrivacidade={() => setPrivacyVisible(!privacyVisible)}
+      sair={onLogout}
+    />
     <main className="painel">
-      <header className="cabecalho-painel">
-        <div><p className="sobretitulo">Rede CredUp</p></div>
-        <div className="acoes-cabecalho">
-          <nav className="navegacao-superior" aria-label="Seções principais">
-            <button className={section === 'overview' ? 'ativo' : ''} onClick={() => openSecao('overview')}>Visão geral</button>
-            {!staff && <button className={section === 'commerces' ? 'ativo' : ''} onClick={() => openSecao('commerces')}>Comércios</button>}
-            <button className={section === 'defaults' ? 'ativo' : ''} onClick={() => openSecao('defaults')}>Inadimplentes</button>
-            {owner && <button className={section === 'staff' ? 'ativo' : ''} onClick={() => openSecao('staff')}>Funcionários</button>}
-            {admin && <button className={section === 'recovery' ? 'ativo' : ''} onClick={() => openSecao('recovery')}>
-              Recuperação {resetRequests.length > 0 && <span>{resetRequests.length}</span>}
-            </button>}
-            {admin && <button className={section === 'auditoria' ? 'ativo' : ''} onClick={() => openSecao('auditoria')}>Logs</button>}
-            <button className={`botao-perfil-navegacao ${section === 'perfil' ? 'ativo' : ''}`} onClick={() => openSecao('perfil')} aria-label="Abrir meu perfil">
-              <b className="avatar-perfil-navegacao">{(perfil?.nome ?? sessao.nome)[0]}</b>
-              <small>Meu perfil</small>
-            </button>
-          </nav>
-          <button className={`alternar-privacidade ${privacyVisible ? 'visivel' : ''}`} onClick={() => setPrivacyVisible(!privacyVisible)}
-            aria-label={privacyVisible ? 'Ocultar todos os dados sensíveis' : 'Exibir dados sensíveis'}>
-            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
-              <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
-              <circle cx="12" cy="12" r="2.75" />
-              {!privacyVisible && <path d="m4 4 16 16" />}
-            </svg>
-            {privacyVisible ? 'Ocultar dados' : 'Exibir dados'}
-          </button>
-        </div>
-      </header>
+      <CabecalhoPainel
+        sessao={sessao}
+        perfil={perfil}
+        assinatura={subscription}
+        secao={section}
+        quantidadeRecuperacoes={resetRequests.length}
+        dadosVisiveis={privacyVisible}
+        administrador={admin}
+        dono={owner}
+        funcionario={staff}
+        abrirSecao={openSecao}
+        alternarPrivacidade={() => setPrivacyVisible(!privacyVisible)}
+        sair={onLogout}
+      />
 
       {section === 'assinatura' && owner && subscription && <div className={`faixa-assinatura ${subscription.status === 'ATIVA' ? 'verde' : subscription.status === 'AGUARDANDO_APROVACAO' || subscription.acessoOperacional ? 'amarela' : 'vermelha'}`}>
         <span className="semaforo-assinatura" />
-        <div><strong>{subscriptionStatusLabels[subscription.status]}</strong><small>{subscription.acessoOperacional ? `Acesso válido até ${subscription.proximaCobranca ? new Date(`${subscription.proximaCobranca}T12:00:00`).toLocaleDateString('pt-BR') : '-'}` : 'Consulte os detalhes da sua assinatura'}</small></div>
+        <div><strong>{ROTULOS_STATUS_ASSINATURA[subscription.status]}</strong><small>{subscription.acessoOperacional ? `Acesso válido até ${subscription.proximaCobranca ? new Date(`${subscription.proximaCobranca}T12:00:00`).toLocaleDateString('pt-BR') : '-'}` : 'Consulte os detalhes da sua assinatura'}</small></div>
         <button className="pequeno" onClick={() => openSecao('assinatura')}>Ver assinatura</button>
       </div>}
 
-      {section === 'overview' && <section className="visualizacao-secao animar-entrada" key="overview">
-        <div className="titulo-secao"><div><p className="sobretitulo">Resumo da rede</p><h2>Visão geral</h2></div><p>Acompanhe os principais números antes de entrar nos detalhes.</p></div>
-        <div className={`estatisticas ${staff ? 'duas-colunas' : ''}`}>
-          <article><small>Registros encontrados</small><strong>{debts.length}</strong><span>clientes na consulta atual</span></article>
-          <article><small>Valor total em aberto</small><strong className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? openValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ ••••••'}</strong><span>não inclui dívidas pagas ou canceladas</span></article>
-          {!staff && <article><small>Comércios aprovados</small><strong>{commerces.filter(commerce => commerce.status === 'APPROVED').length}</strong><span>estabelecimentos ativos na rede</span></article>}
-        </div>
-        <div className="grade-visao-geral">
-          {!staff && <button className="atalho-visao-geral" onClick={() => openSecao('commerces')}><span>01</span><div><strong>Gerenciar comércios</strong><small>Cadastros, aprovações e situação dos mercados</small></div><b>→</b></button>}
-          <button className="atalho-visao-geral" onClick={() => openSecao('defaults')}><span>{staff ? '01' : '02'}</span><div><strong>Consultar inadimplentes</strong><small>Buscas, informações e situação dos clientes</small></div><b>→</b></button>
-          {owner && <button className="atalho-visao-geral" onClick={() => openSecao('staff')}><span>03</span><div><strong>Gerenciar funcionários</strong><small>{employees.length} funcionário(s) vinculado(s)</small></div><b>→</b></button>}
-          {admin && <button className="atalho-visao-geral" onClick={() => openSecao('recovery')}><span>03</span><div><strong>Recuperar acessos</strong><small>{resetRequests.length} solicitação(ões) aguardando análise</small></div><b>→</b></button>}
-        </div>
-      </section>}
+      {section === 'overview' && <SecaoVisaoGeral
+        dividas={debts}
+        comercios={commerces}
+        funcionarios={employees}
+        solicitacoes={resetRequests}
+        dadosVisiveis={privacyVisible}
+        administrador={admin}
+        dono={owner}
+        funcionario={staff}
+        abrirSecao={openSecao}
+      />}
 
       {section === 'commerces' && <section className="visualizacao-secao animar-entrada" key="commerces">
         <div className="titulo-secao"><div><p className="sobretitulo">Estabelecimentos</p><h2>Comércios</h2></div><p>{admin ? 'Analise e acompanhe todos os mercados da rede.' : 'Cadastre e acompanhe seus estabelecimentos.'}</p></div>
@@ -649,8 +527,8 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
             <div className="cabecalho-painel-conteudo"><div><h2>{admin ? 'Mercados cadastrados' : 'Meus comércios'}</h2><p>{commerces.length} estabelecimento(s)</p></div></div>
             <div className="grade-comercios">{commerces.map(commerce => <article className="cartao-mercado" key={commerce.id}>
               <div className="icone-mercado">{commerce.nomeComercio[0]}</div>
-              <div className="informacoes-mercado"><strong>{commerce.nomeComercio}</strong><small className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? displayCnpj(commerce.cnpj) : '**.***.***/****-**'}</small></div>
-              <span className={`indicador ${classesStatusComercio[commerce.status]}`}>{commerceStatusLabels[commerce.status]}</span>
+              <div className="informacoes-mercado"><strong>{commerce.nomeComercio}</strong><small className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? mascararCnpj(commerce.cnpj) : '**.***.***/****-**'}</small></div>
+              <span className={`indicador ${CLASSES_STATUS_COMERCIO[commerce.status]}`}>{ROTULOS_STATUS_COMERCIO[commerce.status]}</span>
               {admin && commerce.status === 'PENDING' && <div className="acoes-mercado"><button className="pequeno" onClick={() => review(commerce.id, 'APPROVED')}>Aprovar</button><button className="pequeno perigo" onClick={() => review(commerce.id, 'REJECTED')}>Reprovar</button></div>}
               {owner && subscription?.acessoOperacional && <div className="acoes-mercado"><button className="pequeno" onClick={() => setEditingCommerce(commerce)}>Editar dados</button><button className="pequeno perigo" onClick={() => deleteComercio(commerce)}>Excluir</button></div>}
             </article>)}
@@ -663,7 +541,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
                 <CampoFlutuante label="Rua"><input name="rua" defaultValue={editingCommerce.endereco.rua} placeholder=" " required /></CampoFlutuante>
                 <CampoFlutuante label="Número"><input name="numberComercio" defaultValue={editingCommerce.endereco.numberComercio} placeholder=" " required /></CampoFlutuante>
                 <CampoFlutuante label="Cidade"><input name="cidade" defaultValue={editingCommerce.endereco.cidade} placeholder=" " required /></CampoFlutuante>
-                <CampoFlutuante label="CEP"><input name="cep" defaultValue={cepMask(editingCommerce.endereco.cep)} inputMode="numeric" maxLength={9} placeholder=" " onInput={event => { event.currentTarget.value = cepMask(event.currentTarget.value) }} required /></CampoFlutuante>
+                <CampoFlutuante label="CEP"><input name="cep" defaultValue={mascararCep(editingCommerce.endereco.cep)} inputMode="numeric" maxLength={9} placeholder=" " onInput={event => { event.currentTarget.value = mascararCep(event.currentTarget.value) }} required /></CampoFlutuante>
               </div>
               <CampoFlutuante label="Ponto de referência"><input name="pontoReferencia" defaultValue={editingCommerce.endereco.pontoReferencia ?? ''} placeholder=" " /></CampoFlutuante>
               <div className="acoes-formulario"><button>Salvar alterações</button><button type="button" className="fantasma" onClick={() => setEditingCommerce(null)}>Cancelar</button></div>
@@ -672,12 +550,12 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
           {owner && <section className="painel-conteudo painel-fixo"><h2>Solicitar cadastro de comércio</h2><p className="suave">A solicitação será analisada pelo administrador. O comércio só entrará na rede depois da aprovação.</p>
             <form onSubmit={createComercio} className="formulario-compacto">
               <CampoFlutuante label="Nome do comércio"><input name="nomeComercio" placeholder=" " required /></CampoFlutuante>
-              <CampoFlutuante label="CNPJ: 00.000.000/0000-00"><input name="cnpj" inputMode="numeric" maxLength={18} placeholder=" " onInput={event => { event.currentTarget.value = cnpjMask(event.currentTarget.value) }} required /></CampoFlutuante>
+              <CampoFlutuante label="CNPJ: 00.000.000/0000-00"><input name="cnpj" inputMode="numeric" maxLength={18} placeholder=" " onInput={event => { event.currentTarget.value = mascararCnpj(event.currentTarget.value) }} required /></CampoFlutuante>
               <div className="grade-formulario">
                 <CampoFlutuante label="Rua"><input name="rua" placeholder=" " required /></CampoFlutuante>
                 <CampoFlutuante label="Número"><input name="numberComercio" placeholder=" " required /></CampoFlutuante>
                 <CampoFlutuante label="Cidade"><input name="cidade" placeholder=" " required /></CampoFlutuante>
-                <CampoFlutuante label="CEP: 00000-000"><input name="cep" inputMode="numeric" maxLength={9} placeholder=" " onInput={event => { event.currentTarget.value = cepMask(event.currentTarget.value) }} required /></CampoFlutuante>
+                <CampoFlutuante label="CEP: 00000-000"><input name="cep" inputMode="numeric" maxLength={9} placeholder=" " onInput={event => { event.currentTarget.value = mascararCep(event.currentTarget.value) }} required /></CampoFlutuante>
               </div>
               <CampoFlutuante label="Ponto de referência"><input name="pontoReferencia" placeholder=" " /></CampoFlutuante>
               <button>Enviar solicitação</button>
@@ -691,10 +569,10 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
         {!staff && (admin || subscription?.podeGerarRelatorio) && <section className="painel-conteudo">
           <div className="cabecalho-painel-conteudo"><div><h2>Relatório em PDF</h2><p>Escolha um dos seus comércios ou selecione “Todos” para incluir toda a rede.</p></div></div>
           <form className="filtros-relatorio" onSubmit={generateReport}>
-            <CampoFlutuante label="Data inicial da dívida"><input name="dataInicio" type="date" min="2000-01-01" max={currentDate()} placeholder=" " required /></CampoFlutuante>
-            <CampoFlutuante label="Data final da dívida"><input name="dataFim" type="date" min="2000-01-01" max={currentDate()} placeholder=" " required /></CampoFlutuante>
+            <CampoFlutuante label="Data inicial da dívida"><input name="dataInicio" type="date" min="2000-01-01" max={dataAtual()} placeholder=" " required /></CampoFlutuante>
+            <CampoFlutuante label="Data final da dívida"><input name="dataFim" type="date" min="2000-01-01" max={dataAtual()} placeholder=" " required /></CampoFlutuante>
             <CampoFlutuante label="Comércio"><select name="idComercio" defaultValue=""><option value="">Todos os comércios da rede</option>{commerces.filter(commerce => admin || commerce.status === 'APPROVED').map(commerce => <option key={commerce.id} value={commerce.id}>{commerce.nomeComercio}</option>)}</select></CampoFlutuante>
-            <CampoFlutuante label="Situação"><select name="status" defaultValue=""><option value="">Todas</option>{Object.entries(debtStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></CampoFlutuante>
+            <CampoFlutuante label="Situação"><select name="status" defaultValue=""><option value="">Todas</option>{Object.entries(ROTULOS_STATUS_DIVIDA).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></CampoFlutuante>
             <button disabled={generatingReport}>{generatingReport ? 'Gerando PDF…' : 'Gerar relatório PDF'}</button>
           </form>
         </section>}
@@ -717,23 +595,23 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
             }} placeholder=" " /></CampoFlutuante><button>Buscar</button></form>
           </div>
           <div className="envoltorio-tabela"><table><thead><tr><th>Cliente</th><th>CPF</th><th>Comércio</th><th>Data da dívida</th><th>Data do cadastro</th><th>Valor</th><th>Status</th><th></th></tr></thead>
-            <tbody>{debts.map(debt => <tr key={debt.id}><td><strong className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? `${debt.cliente.nome} ${debt.cliente.sobrenome}` : 'Cliente protegido'}</strong>{privacyVisible && debt.cliente.apelido && <small>Apelido: {debt.cliente.apelido}</small>}</td><td className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? debt.cliente.cpfMascarado : '***.***.***-**'}</td><td>{debt.nomeComercio}</td><td>{new Date(`${debt.dataDivida}T12:00:00`).toLocaleDateString('pt-BR')}</td><td>{new Date(debt.dataCadastro).toLocaleString('pt-BR')}</td><td className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? debt.valorDivida.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ •••••'}</td><td><span className={`indicador ${classesStatusDivida[debt.status]}`}>{debtStatusLabels[debt.status]}</span></td><td>{debt.status !== 'PAID' && debt.podeDarBaixa && <button className="pequeno" onClick={() => settle(debt.id)}>Dar baixa</button>}</td></tr>)}
+            <tbody>{debts.map(debt => <tr key={debt.id}><td><strong className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? `${debt.cliente.nome} ${debt.cliente.sobrenome}` : 'Cliente protegido'}</strong>{privacyVisible && debt.cliente.apelido && <small>Apelido: {debt.cliente.apelido}</small>}</td><td className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? debt.cliente.cpfMascarado : '***.***.***-**'}</td><td>{debt.nomeComercio}</td><td>{new Date(`${debt.dataDivida}T12:00:00`).toLocaleDateString('pt-BR')}</td><td>{new Date(debt.dataCadastro).toLocaleString('pt-BR')}</td><td className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? debt.valorDivida.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ •••••'}</td><td><span className={`indicador ${CLASSES_STATUS_DIVIDA[debt.status]}`}>{ROTULOS_STATUS_DIVIDA[debt.status]}</span></td><td>{debt.status !== 'PAID' && debt.podeDarBaixa && <button className="pequeno" onClick={() => settle(debt.id)}>Dar baixa</button>}</td></tr>)}
               {!debts.length && <tr><td colSpan={8} className="vazio">Nenhum registro encontrado.</td></tr>}</tbody></table></div>
         </section>
-        {owner && <section className="painel-conteudo painel-formulario"><div className="cabecalho-painel-conteudo"><div><h2>Nova inadimplência</h2><p>Cadastre um cliente e sua dívida em um comércio aprovado.</p></div></div>
+        {(owner || staff) && <section className="painel-conteudo painel-formulario"><div className="cabecalho-painel-conteudo"><div><h2>Nova inadimplência</h2><p>Cadastre um cliente e sua dívida em um comércio aprovado.</p></div></div>
           <form onSubmit={createDivida} className="formulario-compacto formulario-divida">
             <CampoFlutuante label="Selecione o comércio"><select name="idComercio" defaultValue="" required><option value="" disabled></option>{commerces.filter(commerce => commerce.status === 'APPROVED').map(commerce => <option key={commerce.id} value={commerce.id}>{commerce.nomeComercio}</option>)}</select></CampoFlutuante>
             <div className="grade-formulario">
               <CampoFlutuante label="Nome"><input name="nome" placeholder=" " required /></CampoFlutuante>
               <CampoFlutuante label="Sobrenome"><input name="sobrenome" placeholder=" " required /></CampoFlutuante>
               <CampoFlutuante label="Apelido (opcional)"><input name="apelido" maxLength={120} placeholder=" " /></CampoFlutuante>
-              <CampoFlutuante label="CPF: 000.000.000-00"><input name="cpf" inputMode="numeric" maxLength={14} placeholder=" " onInput={event => { event.currentTarget.value = cpfMask(event.currentTarget.value) }} required /></CampoFlutuante>
-              <CampoFlutuante label="Telefone: (11) 99999-9999"><input name="telefone" inputMode="tel" maxLength={15} placeholder=" " onInput={event => { event.currentTarget.value = phoneMask(event.currentTarget.value) }} /></CampoFlutuante>
+              <CampoFlutuante label="CPF: 000.000.000-00"><input name="cpf" inputMode="numeric" maxLength={14} placeholder=" " onInput={event => { event.currentTarget.value = mascararCpf(event.currentTarget.value) }} required /></CampoFlutuante>
+              <CampoFlutuante label="Telefone: (11) 99999-9999"><input name="telefone" inputMode="tel" maxLength={15} placeholder=" " onInput={event => { event.currentTarget.value = mascararTelefone(event.currentTarget.value) }} /></CampoFlutuante>
             </div>
             <CampoFlutuante label="Endereço do cliente"><input name="residencia" placeholder=" " /></CampoFlutuante>
             <div className="grade-formulario">
-              <CampoFlutuante label="Valor: R$ 0,00"><input name="valorDivida" type="text" inputMode="numeric" placeholder=" " onInput={event => { event.currentTarget.value = currencyMask(event.currentTarget.value) }} required /></CampoFlutuante>
-              <CampoFlutuante label="Data da dívida"><input name="dataDivida" type="date" placeholder=" " min="2000-01-01" max={currentDate()} onInput={event => limitDateYear(event.currentTarget)} required /></CampoFlutuante>
+              <CampoFlutuante label="Valor: R$ 0,00"><input name="valorDivida" type="text" inputMode="numeric" placeholder=" " onInput={event => { event.currentTarget.value = mascararMoeda(event.currentTarget.value) }} required /></CampoFlutuante>
+              <CampoFlutuante label="Data da dívida"><input name="dataDivida" type="date" placeholder=" " min="2000-01-01" max={dataAtual()} onInput={event => limitarAnoData(event.currentTarget)} required /></CampoFlutuante>
             </div>
             <CampoFlutuante label="Descrição da dívida"><textarea name="descricao" placeholder=" " /></CampoFlutuante><button>Cadastrar dívida</button>
           </form>
@@ -743,11 +621,11 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
       {section === 'assinatura' && !staff && <section className="visualizacao-secao animar-entrada" key="assinatura">
         <div className="titulo-secao"><div><p className="sobretitulo">Plano e acesso</p><h2>{admin ? 'Assinaturas' : 'Minha assinatura'}</h2></div><p>{admin ? 'Acompanhe e controle os acessos comerciais.' : 'Acompanhe a situação do seu plano.'}</p></div>
         {!admin && subscription && <section className="painel-conteudo cartao-assinatura">
-          <div className={`selo-assinatura ${subscription.status.toLowerCase()}`}>{subscriptionStatusLabels[subscription.status]}</div>
-          <h2>Plano profissional · R$ 39,90 por mês</h2>
-          <p>{subscription.status === 'AGUARDANDO_APROVACAO' ? 'O pagamento ficará disponível quando o administrador aprovar seu primeiro comércio.' : subscription.status === 'ATIVA' ? 'Seu acesso completo está ativo, incluindo relatórios em PDF.' : subscription.acessoOperacional ? 'O pagamento está no período de tolerância de três dias. Seu acesso permanece liberado enquanto aguardamos a confirmação.' : 'As funções operacionais estão bloqueadas até a confirmação do pagamento.'}</p>
+          <div className={`selo-assinatura ${subscription.status.toLowerCase()}`}>{ROTULOS_STATUS_ASSINATURA[subscription.status]}</div>
+          <h2>{systemConfig ? `Plano ${systemConfig.nomePlano.toLocaleLowerCase('pt-BR')} · ${systemConfig.valorMensal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} por mês` : 'Carregando dados do plano…'}</h2>
+          <p>{subscription.status === 'AGUARDANDO_APROVACAO' ? 'O pagamento ficará disponível quando o administrador aprovar seu primeiro comércio.' : subscription.status === 'ATIVA' ? 'Seu acesso completo está ativo, incluindo relatórios em PDF.' : subscription.acessoOperacional ? `O pagamento está no período de tolerância de ${systemConfig?.diasToleranciaPagamento ?? '—'} dias. Seu acesso permanece liberado enquanto aguardamos a confirmação.` : 'As funções operacionais estão bloqueadas até a confirmação do pagamento.'}</p>
           <dl className="detalhes-assinatura">
-            <div><dt>Mensalidade</dt><dd>R$ 39,90</dd></div>
+            <div><dt>Mensalidade</dt><dd>{systemConfig ? systemConfig.valorMensal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—'}</dd></div>
             <div><dt>Vencimento</dt><dd>{subscription.proximaCobranca ? new Date(`${subscription.proximaCobranca}T12:00:00`).toLocaleDateString('pt-BR') : 'Após o primeiro pagamento'}</dd></div>
             <div><dt>Relatórios PDF</dt><dd>{subscription.podeGerarRelatorio ? 'Liberados' : 'Plano profissional'}</dd></div>
           </dl>
@@ -773,82 +651,43 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
             <div className="cabecalho-painel-conteudo"><div><h2>Controle de assinaturas</h2><p>Ative, renove ou cancele o acesso de cada comerciante.</p></div>
               <div className="filtros-assinaturas">
                 <CampoFlutuante label="Buscar comerciante"><input value={subscriptionQuery} onChange={event => setBuscaAssinatura(event.target.value)} placeholder=" " /></CampoFlutuante>
-                <CampoFlutuante label="Situação"><select value={subscriptionStatus} onChange={event => setStatusAssinatura(event.target.value)}><option value="TODAS">Todas</option>{Object.entries(subscriptionStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></CampoFlutuante>
+                <CampoFlutuante label="Situação"><select value={subscriptionStatus} onChange={event => setStatusAssinatura(event.target.value)}><option value="TODAS">Todas</option>{Object.entries(ROTULOS_STATUS_ASSINATURA).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></CampoFlutuante>
               </div>
             </div>
             <div className="lista-assinaturas">{filteredSubscriptions.map(item => <article key={item.id} className={`item-assinatura ${item.solicitacaoAtivacaoEm ? 'solicitacao-pendente' : ''}`}>
               <div><strong>{item.nomeComerciante}</strong><small>{item.emailMascarado}</small>{item.solicitacaoAtivacaoEm && <b>Solicitou ativação em {new Date(item.solicitacaoAtivacaoEm).toLocaleString('pt-BR')}</b>}</div>
-              <span className={`indicador ${item.acessoOperacional ? 'aprovado' : 'rejeitado'}`}>{subscriptionStatusLabels[item.status]}</span>
-              <div className="datas-assinatura"><small>Plano profissional · R$ 39,90/mês</small><small>Vencimento: {item.proximaCobranca ? new Date(`${item.proximaCobranca}T12:00:00`).toLocaleDateString('pt-BR') : '-'}</small></div>
+              <span className={`indicador ${item.acessoOperacional ? 'aprovado' : 'rejeitado'}`}>{ROTULOS_STATUS_ASSINATURA[item.status]}</span>
+              <div className="datas-assinatura"><small>{systemConfig ? `Plano ${systemConfig.nomePlano.toLocaleLowerCase('pt-BR')} · ${systemConfig.valorMensal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/mês` : 'Carregando plano…'}</small><small>Vencimento: {item.proximaCobranca ? new Date(`${item.proximaCobranca}T12:00:00`).toLocaleDateString('pt-BR') : '-'}</small></div>
               <div className="acoes-assinatura"><button className="pequeno perigo" disabled={item.status === 'CANCELADA'} onClick={() => cancelSubscription(item.id)}>Cancelar</button></div>
             </article>)}{!filteredSubscriptions.length && <p className="vazio">Nenhuma assinatura encontrada com esses filtros.</p>}</div>
           </section>
         </>}
       </section>}
 
-      {section === 'staff' && owner && <section className="visualizacao-secao animar-entrada" key="staff">
-        <div className="titulo-secao"><div><p className="sobretitulo">Equipe</p><h2>Funcionários</h2></div><p>Crie acessos individuais e acompanhe quem pode consultar a rede em nome dos seus comércios.</p></div>
-        {staffPassword && <div className="senha-temporaria animar-entrada"><div><small>Senha temporária — exibida somente agora</small><strong>{staffPassword}</strong></div><button onClick={() => navigator.clipboard.writeText(staffPassword)}>Copiar senha</button><button className="perigo" onClick={() => setStaffPassword('')}>Fechar</button></div>}
-        <div className="colunas-secao">
-          <section className="painel-conteudo">
-            <div className="cabecalho-painel-conteudo"><div><h2>Equipe cadastrada</h2><p>{employees.length} funcionário(s) vinculado(s) à sua conta.</p></div></div>
-            <div className="lista-funcionarios">{employees.map(employee => <article className="cartao-funcionario" key={employee.id}>
-              <div className="avatar-funcionario">{employee.nome[0]}{employee.sobrenome[0]}</div>
-              <div className="informacoes-funcionario"><strong>{employee.nome} {employee.sobrenome}</strong>
-                <small className={!privacyVisible ? 'oculto' : ''}>{privacyVisible
-                  ? `${employee.emailMascarado} · ${employee.cpfMascarado} · ${employee.telefoneMascarado}`
-                  : 'Dados pessoais protegidos'}</small>
-                <small>{employee.dataNascimento
-                  ? `Nascimento: ${new Date(`${employee.dataNascimento}T12:00:00`).toLocaleDateString('pt-BR')}`
-                  : 'Data de nascimento não informada'}</small></div>
-              <span className={`indicador ${employee.ativo ? 'aprovado' : 'rejeitado'}`}>{employee.ativo ? 'Ativo' : 'Bloqueado'}</span>
-              <div className="acoes-funcionario"><button className="pequeno" onClick={() => resetStaffPassword(employee.id)}>Redefinir senha</button>
-                <button className={`pequeno ${employee.ativo ? 'perigo' : ''}`} onClick={() => changeStaffStatus(employee)}>{employee.ativo ? 'Bloquear acesso' : 'Reativar acesso'}</button>
-                <button className="pequeno perigo" onClick={() => deleteStaff(employee)}>Excluir funcionário</button></div>
-            </article>)}
-              {!employees.length && <p className="vazio">Nenhum funcionário cadastrado.</p>}</div>
-          </section>
-          <section className="painel-conteudo painel-fixo"><h2>Novo funcionário</h2><p className="suave">O funcionário receberá uma senha temporária e deverá trocá-la no primeiro acesso.</p>
-            <form className="formulario-compacto" onSubmit={createStaff}>
-              <div className="grade-formulario"><CampoFlutuante label="Nome"><input name="nome" placeholder=" " required /></CampoFlutuante><CampoFlutuante label="Sobrenome"><input name="sobrenome" placeholder=" " required /></CampoFlutuante></div>
-              <CampoFlutuante label="CPF: 000.000.000-00"><input name="cpf" inputMode="numeric" maxLength={14} placeholder=" " onInput={event => { event.currentTarget.value = cpfMask(event.currentTarget.value) }} required /></CampoFlutuante>
-              <CampoFlutuante label="Telefone: (11) 99999-9999"><input name="telefone" inputMode="tel" maxLength={15} placeholder=" " onInput={event => { event.currentTarget.value = phoneMask(event.currentTarget.value) }} required /></CampoFlutuante>
-              <CampoFlutuante label="E-mail: funcionario@mercado.com.br"><input name="email" type="email" placeholder=" " required /></CampoFlutuante>
-              <CampoFlutuante label="Data de nascimento (opcional)"><input name="dataNascimento" type="date" max={maximumBirthDate()} placeholder=" "
-                onInvalid={event => event.currentTarget.setCustomValidity('O usuário deve ter pelo menos 18 anos')}
-                onInput={event => event.currentTarget.setCustomValidity('')} /></CampoFlutuante>
-              <button>Criar acesso do funcionário</button>
-            </form>
-          </section>
-        </div>
-      </section>}
+      {section === 'staff' && owner && <SecaoFuncionarios
+        funcionarios={employees}
+        senhaTemporaria={staffPassword}
+        dadosVisiveis={privacyVisible}
+        criar={createStaff}
+        redefinirSenha={resetStaffPassword}
+        alterarStatus={changeStaffStatus}
+        excluir={deleteStaff}
+        fecharSenha={() => setStaffPassword('')}
+      />}
 
-      {section === 'recovery' && admin && <section className="visualizacao-secao animar-entrada" key="recovery">
-        <div className="titulo-secao"><div><p className="sobretitulo">Segurança</p><h2>Recuperação de senha</h2></div><p>Confirme a identidade do responsável antes de gerar uma senha temporária.</p></div>
-        {temporaryPassword && <div className="senha-temporaria animar-entrada"><div><small>Senha temporária — exibida somente agora</small><strong>{privacyVisible ? temporaryPassword : '••••••••••'}</strong></div>{privacyVisible && <button onClick={() => navigator.clipboard.writeText(temporaryPassword)}>Copiar senha</button>}<button className="perigo" onClick={() => setTemporaryPassword('')}>Fechar</button></div>}
-        <section className="painel-conteudo">
-          <div className="cabecalho-painel-conteudo"><div><h2>Solicitações pendentes</h2><p>Analise os dados e confirme a identidade fora do sistema.</p></div><span className="quantidade-solicitacoes">{resetRequests.length} pendente(s)</span></div>
-          <div className="cartoes">{resetRequests.map(request => <article className="cartao-comercio" key={request.id}><div><strong className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? request.nome : 'Responsável protegido'}</strong><small className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? `${request.nomeComercio} · ${request.cpfMascarado} · ${request.telefoneMascarado}` : `${request.nomeComercio} · ***.***.***-** · (**) *****-****`}</small></div><div><button className="pequeno" onClick={() => approveReset(request.id)}>Gerar senha</button><button className="pequeno perigo" onClick={() => rejectReset(request.id)}>Rejeitar</button></div></article>)}
-            {!resetRequests.length && <p className="vazio">Nenhuma solicitação pendente.</p>}</div>
-        </section>
-      </section>}
+      {section === 'recovery' && admin && <SecaoRecuperacao
+        solicitacoes={resetRequests}
+        senhaTemporaria={temporaryPassword}
+        dadosVisiveis={privacyVisible}
+        aprovar={approveReset}
+        rejeitar={rejectReset}
+        fecharSenha={() => setTemporaryPassword('')}
+      />}
 
-      {section === 'auditoria' && admin && <section className="visualizacao-secao animar-entrada" key="auditoria">
-        <div className="titulo-secao"><div><p className="sobretitulo">Segurança e rastreabilidade</p><h2>Logs do sistema</h2></div>
-          <p><span className={`indicador ${auditOnline ? 'aprovado' : 'rejeitado'}`}>{auditOnline ? 'Atualização em tempo real' : 'Reconectando…'}</span></p></div>
-        <section className="painel-conteudo">
-          <div className="cabecalho-painel-conteudo"><div><h2>Atividades recentes</h2><p>Últimos 200 eventos de auditoria, atualizados automaticamente.</p></div><span>{auditRecords.length} evento(s)</span></div>
-          <div className="envoltorio-tabela"><table><thead><tr><th>Data e hora</th><th>Quem fez</th><th>O que fez</th><th>Para quem/qual item</th><th>Detalhes</th></tr></thead>
-            <tbody>{auditRecords.map(record => <tr key={record.id}>
-              <td>{new Date(record.dataHora).toLocaleString('pt-BR')}</td>
-              <td><strong>{record.nomeUsuario}</strong><br /><small>{roleLabels[record.perfilAcesso]}</small></td>
-              <td>{describeAuditAction(record)}</td>
-              <td><strong>{record.alvoDescricao ?? record.entidade}</strong><br /><small>{record.entidade} · <code>{record.alvoId}</code></small></td>
-              <td>{record.detalhes ?? 'Sem detalhes adicionais'}</td>
-            </tr>)}
-            {!auditRecords.length && <tr><td colSpan={5} className="vazio">Nenhum evento de auditoria registrado.</td></tr>}</tbody></table></div>
-        </section>
-      </section>}
+      {section === 'auditoria' && admin && <SecaoAuditoria
+        registros={auditRecords}
+        online={auditOnline}
+      />}
 
       {section === 'perfil' && <section className="visualizacao-secao animar-entrada" key="perfil">
         <div className="titulo-secao"><div><p className="sobretitulo">Minha conta</p><h2>Meu perfil</h2></div><p>Consulte e mantenha suas informações pessoais atualizadas.</p></div>
@@ -857,7 +696,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
             <section className="painel-conteudo resumo-perfil">
               <div className="avatar-perfil-grande">{perfil.nome[0]}{perfil.sobrenome[0]}</div>
               <h2>{perfil.nome} {perfil.sobrenome}</h2>
-              <span className="perfil-acesso">{roleLabels[perfil.perfilAcesso]}</span>
+              <span className="perfil-acesso">{ROTULOS_PERFIL[perfil.perfilAcesso]}</span>
               <dl>
                 <div><dt>CPF</dt><dd className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? perfil.cpfMascarado : '***.***.***-**'}</dd></div>
                 <div><dt>E-mail</dt><dd className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? perfil.emailMascarado : '••••••@••••••.•••'}</dd></div>
@@ -869,11 +708,11 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
               <form className="formulario-compacto" onSubmit={updatePerfil}>
                 <div className="grade-formulario"><CampoFlutuante label="Nome"><input name="nome" placeholder=" " defaultValue={perfil.nome} required /></CampoFlutuante><CampoFlutuante label="Sobrenome"><input name="sobrenome" placeholder=" " defaultValue={perfil.sobrenome} required /></CampoFlutuante></div>
                 <CampoFlutuante label="CPF"><input value={perfil.cpfMascarado} placeholder=" " disabled /></CampoFlutuante>
-                <CampoFlutuante label={`Novo telefone (atual: ${perfil.telefoneMascarado})`}><input name="telefone" inputMode="tel" maxLength={15} placeholder=" " onInput={event => { event.currentTarget.value = phoneMask(event.currentTarget.value) }} /></CampoFlutuante>
+                <CampoFlutuante label={`Novo telefone (atual: ${perfil.telefoneMascarado})`}><input name="telefone" inputMode="tel" maxLength={15} placeholder=" " onInput={event => { event.currentTarget.value = mascararTelefone(event.currentTarget.value) }} /></CampoFlutuante>
                 <CampoFlutuante label={`Novo e-mail (atual: ${perfil.emailMascarado})`}><input name="email" type="email" placeholder=" " /></CampoFlutuante>
-                <CampoFlutuante label="Data de nascimento (opcional)"><input name="dataNascimento" type="date" placeholder=" " min="1900-01-01" max={maximumBirthDate()} defaultValue={perfil.dataNascimento ?? ''}
+                <CampoFlutuante label="Data de nascimento (opcional)"><input name="dataNascimento" type="date" placeholder=" " min="1900-01-01" max={dataMaximaNascimento()} defaultValue={perfil.dataNascimento ?? ''}
                   onInvalid={event => event.currentTarget.setCustomValidity('O usuário deve ter pelo menos 18 anos')}
-                  onInput={event => { event.currentTarget.setCustomValidity(''); limitDateYear(event.currentTarget) }} /></CampoFlutuante>
+                  onInput={event => { event.currentTarget.setCustomValidity(''); limitarAnoData(event.currentTarget) }} /></CampoFlutuante>
                 <button>Salvar alterações</button>
               </form>
             </section>
