@@ -18,16 +18,17 @@ import java.util.*;
 
 @Service
 public class ServicoAssinatura {
-    public static final int DIAS_TOLERANCIA_PAGAMENTO = 3;
-
     private final RepositorioAssinatura assinaturas;
     private final RepositorioRegistroAuditoria auditoria;
+    private final ServicoConfiguracaoSistema configuracoes;
 
     public ServicoAssinatura(
             RepositorioAssinatura assinaturas,
-            RepositorioRegistroAuditoria auditoria) {
+            RepositorioRegistroAuditoria auditoria,
+            ServicoConfiguracaoSistema configuracoes) {
         this.assinaturas = assinaturas;
         this.auditoria = auditoria;
+        this.configuracoes = configuracoes;
     }
 
     @Transactional
@@ -156,9 +157,11 @@ public class ServicoAssinatura {
     }
 
     private void atualizarCicloCobranca(Assinatura assinatura, LocalDate pagamentoEm) {
+        int diasToleranciaPagamento = configuracoes.obter()
+                .getDiasToleranciaPagamento();
         var vencimentoAtual = assinatura.getProximaCobranca();
         boolean renovacaoDentroDaTolerancia = vencimentoAtual != null
-                && !pagamentoEm.isAfter(vencimentoAtual.plusDays(DIAS_TOLERANCIA_PAGAMENTO));
+                && !pagamentoEm.isAfter(vencimentoAtual.plusDays(diasToleranciaPagamento));
 
         if (assinatura.getDiaCobranca() == null || !renovacaoDentroDaTolerancia) {
             assinatura.setDiaCobranca(pagamentoEm.getDayOfMonth());
@@ -269,6 +272,8 @@ public class ServicoAssinatura {
     }
 
     private void atualizarStatus(Assinatura assinatura) {
+        int diasToleranciaPagamento = configuracoes.obter()
+                .getDiasToleranciaPagamento();
         var hoje = LocalDate.now();
         if (assinatura.getStatus() == StatusAssinatura.ATIVA
                 && assinatura.getProximaCobranca() != null
@@ -278,7 +283,7 @@ public class ServicoAssinatura {
         if (assinatura.getStatus() == StatusAssinatura.AGUARDANDO_PAGAMENTO
                 && assinatura.getProximaCobranca() != null
                 && hoje.isAfter(assinatura.getProximaCobranca()
-                        .plusDays(DIAS_TOLERANCIA_PAGAMENTO))) {
+                        .plusDays(diasToleranciaPagamento))) {
             assinatura.setStatus(StatusAssinatura.ATRASADA);
         }
     }
@@ -290,7 +295,8 @@ public class ServicoAssinatura {
         return assinatura.getStatus() == StatusAssinatura.AGUARDANDO_PAGAMENTO
                 && assinatura.getProximaCobranca() != null
                 && !LocalDate.now().isAfter(assinatura.getProximaCobranca()
-                        .plusDays(DIAS_TOLERANCIA_PAGAMENTO));
+                        .plusDays(configuracoes.obter()
+                                .getDiasToleranciaPagamento()));
     }
 
     private RespostaAssinatura mapear(Assinatura assinatura) {
