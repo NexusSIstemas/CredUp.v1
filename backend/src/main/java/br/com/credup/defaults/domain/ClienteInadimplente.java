@@ -11,8 +11,8 @@ import java.util.UUID;
 public class ClienteInadimplente extends EntidadeBase {
     @Column(name = "nome", nullable = false) private String name;
     @Column(name = "sobrenome", nullable = false) private String surname;
-    @Column(name = "apelido", length = 120) private String nickname;
-    @Column(nullable = false, unique = true, length = 11) private String cpf;
+    @Column(name = "apelido", nullable = false, length = 120) private String nickname;
+    @Column(unique = true, length = 11) private String cpf;
     @Column(name = "telefone") private String telephone;
     @Column(name = "residencia") private String residence;
     @Column(name = "descricao", columnDefinition = "text") private String description;

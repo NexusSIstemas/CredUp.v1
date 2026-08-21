@@ -104,8 +104,8 @@ export interface Divida {
     id: string
     nome: string
     sobrenome: string
-    apelido: string | null
-    cpfMascarado: string
+    apelido: string
+    cpfMascarado: string | null
   }
   idComercio: string
   nomeComercio: string

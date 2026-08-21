@@ -48,9 +48,11 @@ public class ServicoInadimplencia {
         if (request.dataDivida().isBefore(LocalDate.of(2000, 1, 1)))
             throw new ExcecaoApi(HttpStatus.UNPROCESSABLE_ENTITY,
                     "A data da dívida deve ser a partir de 01/01/2000");
-        var client = clients.findByCpf(request.cliente().cpf())
-                .map(existing -> addNicknameWhenMissing(existing, request.cliente().apelido()))
-                .orElseGet(() -> createClient(request.cliente()));
+        String cpf = normalizeCpf(request.cliente().cpf());
+        var client = cpf == null
+                ? createClient(request.cliente(), null)
+                : clients.findByCpf(cpf)
+                        .orElseGet(() -> createClient(request.cliente(), cpf));
         var debt = new Divida();
         debt.setClient(client);
         debt.setComercio(commerce);
@@ -66,30 +68,25 @@ public class ServicoInadimplencia {
         return map(debt, current);
     }
 
-    private ClienteInadimplente createClient(SolicitacaoCliente request) {
+    private ClienteInadimplente createClient(
+            SolicitacaoCliente request,
+            String cpf) {
         var client = new ClienteInadimplente();
         client.setName(request.nome());
         client.setSurname(request.sobrenome());
         client.setNickname(normalizeNickname(request.apelido()));
-        client.setCpf(request.cpf());
+        client.setCpf(cpf);
         client.setTelephone(request.telefone());
         client.setResidence(request.residencia());
         client.setDescription(request.descricao());
         try {
             return clients.saveAndFlush(client);
         } catch (DataIntegrityViolationException ex) {
-            return clients.findByCpf(request.cpf()).orElseThrow(() -> ex);
+            if (cpf == null) {
+                throw ex;
+            }
+            return clients.findByCpf(cpf).orElseThrow(() -> ex);
         }
-    }
-
-    private ClienteInadimplente addNicknameWhenMissing(
-            ClienteInadimplente client,
-            String nickname) {
-        var normalizedNickname = normalizeNickname(nickname);
-        if (client.getNickname() == null && normalizedNickname != null) {
-            client.setNickname(normalizedNickname);
-        }
-        return client;
     }
 
     private String normalizeNickname(String nickname) {
@@ -97,6 +94,13 @@ public class ServicoInadimplencia {
             return null;
         }
         return nickname.trim();
+    }
+
+    private String normalizeCpf(String cpf) {
+        if (cpf == null || cpf.isBlank()) {
+            return null;
+        }
+        return cpf.trim();
     }
 
     @Transactional(readOnly = true)
@@ -170,6 +174,9 @@ public class ServicoInadimplencia {
     }
 
     static String mask(String cpf) {
+        if (cpf == null || cpf.isBlank()) {
+            return null;
+        }
         return cpf.substring(0, 3) + ".***.***-" + cpf.substring(9, 11);
     }
 
