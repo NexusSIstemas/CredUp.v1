@@ -98,7 +98,7 @@ jobs:
 
       - name: Executar publicação
         run: |
-          ssh \
+          if ! ssh \
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
             -o ConnectTimeout=15 \
@@ -106,6 +106,16 @@ jobs:
             -p "$PORTA" \
             "$USUARIO@$HOST" \
             "cd '$DIRETORIO' && chmod +x scripts/*.sh && ./scripts/deploy-production.sh"
+          then
+            ssh \
+              -o BatchMode=yes \
+              -o IdentitiesOnly=yes \
+              -i "$HOME/.ssh/credup_deploy" \
+              -p "$PORTA" \
+              "$USUARIO@$HOST" \
+              "cd '$DIRETORIO' && docker compose --env-file .env.production -f docker-compose.production.yml logs --tail=120 backend"
+            exit 1
+          fi
 
       - name: Verificar aplicação
         run: |
