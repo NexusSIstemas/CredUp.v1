@@ -6,12 +6,11 @@ import {
   type TomAlerta
 } from '../services/alertas'
 import { CampoFlutuante } from '../components/CampoFlutuante'
-import type { Assinatura, CobrancaPix, StatusCobrancaPix, Comercio, ConfiguracaoPublica, Divida, Funcionario, Pagina, SolicitacaoRedefinicaoSenha, Perfil, RegistroAuditoria, Sessao, StatusComercio } from '../types'
+import type { Assinatura, CobrancaPix, StatusCobrancaPix, Comercio, ConfiguracaoPublica, Divida, Funcionario, PagamentoAssinatura, Pagina, SolicitacaoRedefinicaoSenha, Perfil, RegistroAuditoria, Sessao, StatusComercio } from '../types'
 import {
   CLASSES_STATUS_COMERCIO,
   CLASSES_STATUS_DIVIDA,
   ROTULOS_PERFIL,
-  ROTULOS_STATUS_ASSINATURA,
   ROTULOS_STATUS_COMERCIO,
   ROTULOS_STATUS_DIVIDA,
   descreverAcaoAuditoria,
@@ -33,6 +32,7 @@ import { SecaoAuditoria } from './painel/secoes/SecaoAuditoria'
 import { SecaoRecuperacao } from './painel/secoes/SecaoRecuperacao'
 import { SecaoVisaoGeral } from './painel/secoes/SecaoVisaoGeral'
 import { SecaoFuncionarios } from './painel/secoes/SecaoFuncionarios'
+import { SecaoAssinaturas } from './painel/secoes/SecaoAssinaturas'
 import { BarraLateralPainel, CabecalhoPainel } from './painel/NavegacaoPainel'
 
 export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
@@ -57,6 +57,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   const [generatingReport, setGerandoRelatorio] = useState(false)
   const [subscription, setAssinatura] = useState<Assinatura | null>(null)
   const [subscriptions, setAssinaturas] = useState<Assinatura[]>([])
+  const [subscriptionHistory, setHistoricoAssinaturas] = useState<PagamentoAssinatura[]>([])
   const [subscriptionQuery, setBuscaAssinatura] = useState('')
   const [subscriptionStatus, setStatusAssinatura] = useState('TODAS')
   const [subscriptionLoaded, setAssinaturaCarregada] = useState(false)
@@ -103,6 +104,9 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   const loadSubscriptions = () => api<Assinatura[]>('/assinaturas')
     .then(setAssinaturas)
     .catch(showError)
+  const loadSubscriptionHistory = () => api<PagamentoAssinatura[]>(
+    admin ? '/assinaturas/historico' : '/assinaturas/minha/historico'
+  ).then(setHistoricoAssinaturas).catch(showError)
   const loadSystemConfig = () => api<ConfiguracaoPublica>('/configuracoes/publicas')
     .then(setConfiguracaoSistema)
     .catch(showError)
@@ -113,8 +117,10 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
     if (admin) {
       loadResets()
       loadSubscriptions()
+      loadSubscriptionHistory()
     } else if (owner) {
       loadSubscription()
+      loadSubscriptionHistory()
     }
   }, [])
 
@@ -156,6 +162,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
           window.clearInterval(interval)
           showAlert('Pagamento confirmado. Sua assinatura foi ativada.', 'sucesso')
           loadSubscription()
+          loadSubscriptionHistory()
         }
       } catch {
         // Uma falha temporária não interrompe a tela nem duplica a cobrança.
@@ -191,7 +198,11 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
     if (next === 'perfil') loadPerfil()
     if (next === 'staff') loadStaff()
     if (next === 'auditoria') loadAuditoria()
-    if (next === 'assinatura') admin ? loadSubscriptions() : owner && loadSubscription()
+    if (next === 'assinatura') {
+      if (admin) loadSubscriptions()
+      if (owner) loadSubscription()
+      if (admin || owner) loadSubscriptionHistory()
+    }
   }
 
   async function generatePixCharge() {
@@ -396,7 +407,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
       })
       formElement.reset()
       setStaffPassword(result.senhaTemporaria)
-      showAlert('Funcionário criado. Entregue a senha temporária após confirmar a identidade.', 'sucesso')
+      showAlert('Operador criado. Entregue a senha temporária após confirmar a identidade.', 'sucesso')
       loadStaff()
     } catch (erro) { showError(erro) }
   }
@@ -409,8 +420,8 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
       })
       showAlert(
         funcionario.ativo
-          ? 'Acesso do funcionário bloqueado.'
-          : 'Acesso do funcionário reativado.',
+          ? 'Acesso do operador bloqueado.'
+          : 'Acesso do operador reativado.',
         'sucesso'
       )
       loadStaff()
@@ -428,13 +439,13 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
 
   async function deleteStaff(funcionario: Funcionario) {
     const confirmed = await confirmarExclusao(
-      'Excluir funcionário?',
-      `O funcionário "${funcionario.nome} ${funcionario.sobrenome}" será excluído. Esta ação não poderá ser desfeita.`
+      'Excluir operador?',
+      `O operador "${funcionario.nome} ${funcionario.sobrenome}" será excluído. Esta ação não poderá ser desfeita.`
     )
     if (!confirmed) return
     try {
       await api(`/staff/${funcionario.id}`, { method: 'DELETE' })
-      showAlert('Funcionário excluído.', 'sucesso')
+      showAlert('Operador excluído.', 'sucesso')
       loadStaff()
     } catch (erro) { showError(erro) }
   }
@@ -502,11 +513,6 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
         sair={onLogout}
       />
 
-      {section === 'assinatura' && owner && subscription && <div className={`faixa-assinatura ${subscription.status === 'ATIVA' ? 'verde' : subscription.status === 'AGUARDANDO_APROVACAO' || subscription.acessoOperacional ? 'amarela' : 'vermelha'}`}>
-        <span className="semaforo-assinatura" />
-        <div><strong>{ROTULOS_STATUS_ASSINATURA[subscription.status]}</strong><small>{subscription.acessoOperacional ? `Acesso válido até ${subscription.proximaCobranca ? new Date(`${subscription.proximaCobranca}T12:00:00`).toLocaleDateString('pt-BR') : '-'}` : 'Consulte os detalhes da sua assinatura'}</small></div>
-        <button className="pequeno" onClick={() => openSecao('assinatura')}>Ver assinatura</button>
-      </div>}
 
       {section === 'overview' && <SecaoVisaoGeral
         dividas={debts}
@@ -618,51 +624,27 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
         </section>}
       </section>}
 
-      {section === 'assinatura' && !staff && <section className="visualizacao-secao animar-entrada" key="assinatura">
-        <div className="titulo-secao"><div><p className="sobretitulo">Plano e acesso</p><h2>{admin ? 'Assinaturas' : 'Minha assinatura'}</h2></div><p>{admin ? 'Acompanhe e controle os acessos comerciais.' : 'Acompanhe a situação do seu plano.'}</p></div>
-        {!admin && subscription && <section className="painel-conteudo cartao-assinatura">
-          <div className={`selo-assinatura ${subscription.status.toLowerCase()}`}>{ROTULOS_STATUS_ASSINATURA[subscription.status]}</div>
-          <h2>{systemConfig ? `Plano ${systemConfig.nomePlano.toLocaleLowerCase('pt-BR')} · ${systemConfig.valorMensal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} por mês` : 'Carregando dados do plano…'}</h2>
-          <p>{subscription.status === 'AGUARDANDO_APROVACAO' ? 'O pagamento ficará disponível quando o administrador aprovar seu primeiro comércio.' : subscription.status === 'ATIVA' ? 'Seu acesso completo está ativo, incluindo relatórios em PDF.' : subscription.acessoOperacional ? `O pagamento está no período de tolerância de ${systemConfig?.diasToleranciaPagamento ?? '—'} dias. Seu acesso permanece liberado enquanto aguardamos a confirmação.` : 'As funções operacionais estão bloqueadas até a confirmação do pagamento.'}</p>
-          <dl className="detalhes-assinatura">
-            <div><dt>Mensalidade</dt><dd>{systemConfig ? systemConfig.valorMensal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—'}</dd></div>
-            <div><dt>Vencimento</dt><dd>{subscription.proximaCobranca ? new Date(`${subscription.proximaCobranca}T12:00:00`).toLocaleDateString('pt-BR') : 'Após o primeiro pagamento'}</dd></div>
-            <div><dt>Relatórios PDF</dt><dd>{subscription.podeGerarRelatorio ? 'Liberados' : 'Plano profissional'}</dd></div>
-          </dl>
-          {owner && ['AGUARDANDO_PAGAMENTO', 'EXPIRADA', 'ATRASADA', 'CANCELADA'].includes(subscription.status) && <button disabled={pixLoading} onClick={generatePixCharge}>{pixLoading ? 'Gerando cobrança...' : 'Pagar assinatura com Pix'}</button>}
-          {pixCharge && <div className="cobranca-pix animar-entrada">
-            <h3>Pix de {pixCharge.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</h3>
-            <img src={pixCharge.qrCodeBase64} alt="QR Code da cobrança Pix" />
-            <label>Pix Copia e Cola</label>
-            <textarea readOnly value={pixCharge.pixCopiaECola} />
-            <button className="pequeno" onClick={() => { void navigator.clipboard.writeText(pixCharge.pixCopiaECola); showAlert('Pix Copia e Cola copiado.', 'sucesso') }}>Copiar código Pix</button>
-            <p className={`status-pix ${['CONCLUIDA', 'processed'].includes(pixCharge.status) ? 'pago' : ''}`}>{['CONCLUIDA', 'processed'].includes(pixCharge.status) ? 'Pagamento confirmado pelo Mercado Pago' : 'Aguardando confirmação do Mercado Pago...'}</p>
-            <small>{pixCharge.avisoConfirmacao}</small>
-          </div>}
-          {subscription.solicitacaoAtivacaoEm && <p className="solicitacao-enviada">Solicitação enviada. Aguarde a análise do administrador.</p>}
-        </section>}
-        {admin && <>
-          <div className="estatisticas estatisticas-assinaturas">
-            <article><small>Total de assinaturas</small><strong>{subscriptions.length}</strong><span>comerciantes cadastrados</span></article>
-            <article><small>Acessos liberados</small><strong>{subscriptions.filter(item => item.acessoOperacional).length}</strong><span>plano pago e ativo</span></article>
-            <article><small>Solicitações pendentes</small><strong>{subscriptions.filter(item => item.solicitacaoAtivacaoEm).length}</strong><span>aguardando sua análise</span></article>
-          </div>
-          <section className="painel-conteudo">
-            <div className="cabecalho-painel-conteudo"><div><h2>Controle de assinaturas</h2><p>Ative, renove ou cancele o acesso de cada comerciante.</p></div>
-              <div className="filtros-assinaturas">
-                <CampoFlutuante label="Buscar comerciante"><input value={subscriptionQuery} onChange={event => setBuscaAssinatura(event.target.value)} placeholder=" " /></CampoFlutuante>
-                <CampoFlutuante label="Situação"><select value={subscriptionStatus} onChange={event => setStatusAssinatura(event.target.value)}><option value="TODAS">Todas</option>{Object.entries(ROTULOS_STATUS_ASSINATURA).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></CampoFlutuante>
-              </div>
-            </div>
-            <div className="lista-assinaturas">{filteredSubscriptions.map(item => <article key={item.id} className={`item-assinatura ${item.solicitacaoAtivacaoEm ? 'solicitacao-pendente' : ''}`}>
-              <div><strong>{item.nomeComerciante}</strong><small>{item.emailMascarado}</small>{item.solicitacaoAtivacaoEm && <b>Solicitou ativação em {new Date(item.solicitacaoAtivacaoEm).toLocaleString('pt-BR')}</b>}</div>
-              <span className={`indicador ${item.acessoOperacional ? 'aprovado' : 'rejeitado'}`}>{ROTULOS_STATUS_ASSINATURA[item.status]}</span>
-              <div className="datas-assinatura"><small>{systemConfig ? `Plano ${systemConfig.nomePlano.toLocaleLowerCase('pt-BR')} · ${systemConfig.valorMensal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/mês` : 'Carregando plano…'}</small><small>Vencimento: {item.proximaCobranca ? new Date(`${item.proximaCobranca}T12:00:00`).toLocaleDateString('pt-BR') : '-'}</small></div>
-              <div className="acoes-assinatura"><button className="pequeno perigo" disabled={item.status === 'CANCELADA'} onClick={() => cancelSubscription(item.id)}>Cancelar</button></div>
-            </article>)}{!filteredSubscriptions.length && <p className="vazio">Nenhuma assinatura encontrada com esses filtros.</p>}</div>
-          </section>
-        </>}
-      </section>}
+      {section === 'assinatura' && !staff && <SecaoAssinaturas
+        administrador={admin}
+        gestor={owner}
+        assinatura={subscription}
+        assinaturas={subscriptions}
+        assinaturasFiltradas={filteredSubscriptions}
+        historico={subscriptionHistory}
+        configuracao={systemConfig}
+        busca={subscriptionQuery}
+        situacao={subscriptionStatus}
+        cobrancaPix={pixCharge}
+        gerandoPix={pixLoading}
+        alterarBusca={setBuscaAssinatura}
+        alterarSituacao={setStatusAssinatura}
+        gerarCobrancaPix={generatePixCharge}
+        cancelarAssinatura={cancelSubscription}
+        copiarPix={codigo => {
+          void navigator.clipboard.writeText(codigo)
+          showAlert('Pix Copia e Cola copiado.', 'sucesso')
+        }}
+      />}
 
       {section === 'staff' && owner && <SecaoFuncionarios
         funcionarios={employees}
@@ -718,7 +700,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
             </section>
             <section className="painel-conteudo">
               <div className="cabecalho-painel-conteudo"><div><h2>PIN de recuperação</h2><p>{perfil.pinRecuperacaoConfigurado ? 'Seu PIN está configurado. Você pode substituí-lo abaixo.' : 'Configure o PIN para recuperar sua conta sem depender do administrador.'}</p></div></div>
-              <div className="aviso-pin"><strong>⚠ Dado sensível: guarde este PIN</strong><p>O PIN tem 6 números, não será exibido novamente e será necessário se você esquecer a senha. Não compartilhe com funcionários ou terceiros.</p></div>
+              <div className="aviso-pin"><strong>⚠ Dado sensível: guarde este PIN</strong><p>O PIN tem 6 números, não será exibido novamente e será necessário se você esquecer a senha. Não compartilhe com operadores ou terceiros.</p></div>
               <form className="formulario-compacto" onSubmit={configurarPin}>
                 <CampoFlutuante label="Senha atual"><input name="senhaAtual" type="password" placeholder=" " required /></CampoFlutuante>
                 <div className="grade-formulario"><CampoFlutuante label="Novo PIN (6 números)"><input name="pin" type="password" inputMode="numeric" minLength={6} maxLength={6} pattern="\d{6}" placeholder=" " required onInput={event => { event.currentTarget.value = event.currentTarget.value.replace(/\D/g, '').slice(0, 6) }} /></CampoFlutuante><CampoFlutuante label="Confirmar PIN"><input name="confirmacaoPin" type="password" inputMode="numeric" minLength={6} maxLength={6} pattern="\d{6}" placeholder=" " required onInput={event => { event.currentTarget.value = event.currentTarget.value.replace(/\D/g, '').slice(0, 6) }} /></CampoFlutuante></div>

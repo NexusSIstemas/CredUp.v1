@@ -20,6 +20,10 @@ export interface Assinatura {
   inicioAssinatura: string | null
   proximaCobranca: string | null
   solicitacaoAtivacaoEm: string | null
+  valorUltimoPagamento: number | null
+  ultimoPagamentoEm: string | null
+  criadaEm: string
+  atualizadaEm: string
   acessoOperacional: boolean
   podeGerarRelatorio: boolean
 }
@@ -70,6 +74,15 @@ export interface Perfil {
   dataNascimento: string | null
   perfilAcesso: PerfilAcesso
   pinRecuperacaoConfigurado: boolean
+}
+
+export interface PagamentoAssinatura {
+  id: string
+  nomeGestor: string
+  emailMascarado: string
+  valor: number
+  pagoEm: string
+  acessoValidoAte: string
 }
 
 export interface Funcionario {

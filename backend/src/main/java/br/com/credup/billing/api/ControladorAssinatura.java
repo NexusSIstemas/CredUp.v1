@@ -1,6 +1,7 @@
 package br.com.credup.billing.api;
 
 import br.com.credup.billing.api.DtosAssinatura.RespostaAssinatura;
+import br.com.credup.billing.api.DtosAssinatura.RespostaPagamentoAssinatura;
 import br.com.credup.billing.application.ServicoAssinatura;
 import br.com.credup.identity.domain.Usuario;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -42,10 +43,23 @@ public class ControladorAssinatura {
         return servico.minha(usuario);
     }
 
+    @GetMapping("/minha/historico")
+    @PreAuthorize("hasRole('MERCHANT_OWNER')")
+    List<RespostaPagamentoAssinatura> meuHistorico(
+            @AuthenticationPrincipal Usuario usuario) {
+        return servico.listarMeuHistorico(usuario);
+    }
+
     @GetMapping
     @PreAuthorize("hasRole('ADMIN_REDE')")
     List<RespostaAssinatura> listar() {
         return servico.listarTodas();
+    }
+
+    @GetMapping("/historico")
+    @PreAuthorize("hasRole('ADMIN_REDE')")
+    List<RespostaPagamentoAssinatura> historicoCompleto() {
+        return servico.listarHistoricoCompleto();
     }
 
     @PatchMapping("/{id}/cancelar")

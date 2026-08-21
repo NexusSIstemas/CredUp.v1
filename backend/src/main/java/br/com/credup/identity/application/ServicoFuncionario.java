@@ -69,7 +69,7 @@ public class ServicoFuncionario {
         employee.setEnabled(true);
         staffRepository.save(employee);
         auditLogs.save(RegistroAuditoria.of(owner, "CREATE_STAFF", "FuncionarioComercio", employee.getId(),
-                employee.getName() + " " + employee.getSurname(), "Criou o acesso do funcionário"));
+                employee.getName() + " " + employee.getSurname(), "Criou o acesso do operador"));
         return new RespostaFuncionarioCriado(map(employee), senha);
     }
 
@@ -88,7 +88,7 @@ public class ServicoFuncionario {
         employee.setEnabled(request.ativo());
         auditLogs.save(RegistroAuditoria.of(owner, request.ativo() ? "ENABLE_STAFF" : "DISABLE_STAFF",
                 "FuncionarioComercio", employee.getId(), employee.getName() + " " + employee.getSurname(),
-                request.ativo() ? "Reativou o acesso do funcionário" : "Bloqueou o acesso do funcionário"));
+                request.ativo() ? "Reativou o acesso do operador" : "Bloqueou o acesso do operador"));
         return map(employee);
     }
 
@@ -105,7 +105,7 @@ public class ServicoFuncionario {
         sessoesAtualizacao.revogarTodas(employee);
         auditLogs.save(RegistroAuditoria.of(owner, "RESET_STAFF_PASSWORD", "FuncionarioComercio", employee.getId(),
                 employee.getName() + " " + employee.getSurname(),
-                "Gerou uma nova senha temporária para o funcionário"));
+                "Gerou uma nova senha temporária para o operador"));
         return new RespostaSenhaFuncionario(senha);
     }
 
@@ -115,20 +115,20 @@ public class ServicoFuncionario {
         Comerciante owner = owner(current);
         var employee = findOwned(owner, id);
         auditLogs.save(RegistroAuditoria.of(owner, "DELETE_STAFF", "FuncionarioComercio", employee.getId(),
-                employee.getName() + " " + employee.getSurname(), "Excluiu permanentemente o funcionário"));
+                employee.getName() + " " + employee.getSurname(), "Excluiu permanentemente o operador"));
         staffRepository.delete(employee);
     }
 
     private Comerciante owner(Usuario current) {
         if (current.getPerfilAcesso() != PerfilAcesso.MERCHANT_OWNER)
-            throw new ExcecaoApi(HttpStatus.FORBIDDEN, "Apenas o dono pode gerenciar funcionários");
+            throw new ExcecaoApi(HttpStatus.FORBIDDEN, "Apenas o gestor pode gerenciar operadores");
         return merchants.findById(current.getId())
                 .orElseThrow(() -> new ExcecaoApi(HttpStatus.NOT_FOUND, "Dono não encontrado"));
     }
 
     private FuncionarioComercio findOwned(Comerciante owner, UUID id) {
         return staffRepository.findByIdAndResponsavelId(id, owner.getId())
-                .orElseThrow(() -> new ExcecaoApi(HttpStatus.NOT_FOUND, "Funcionário não encontrado"));
+                .orElseThrow(() -> new ExcecaoApi(HttpStatus.NOT_FOUND, "Operador não encontrado"));
     }
 
     private RespostaFuncionario map(FuncionarioComercio employee) {

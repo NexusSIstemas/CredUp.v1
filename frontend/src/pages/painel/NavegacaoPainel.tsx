@@ -69,7 +69,7 @@ export function CabecalhoPainel({
           <button className={secao === 'overview' ? 'ativo' : ''} onClick={() => abrirSecao('overview')}>Visão geral</button>
           {!funcionario && <button className={secao === 'commerces' ? 'ativo' : ''} onClick={() => abrirSecao('commerces')}>Comércios</button>}
           <button className={secao === 'defaults' ? 'ativo' : ''} onClick={() => abrirSecao('defaults')}>Inadimplentes</button>
-          {dono && <button className={secao === 'staff' ? 'ativo' : ''} onClick={() => abrirSecao('staff')}>Funcionários</button>}
+          {dono && <button className={secao === 'staff' ? 'ativo' : ''} onClick={() => abrirSecao('staff')}>Operadores</button>}
           {administrador && <button className={secao === 'recovery' ? 'ativo' : ''} onClick={() => abrirSecao('recovery')}>
             Recuperação {quantidadeRecuperacoes > 0 && <span>{quantidadeRecuperacoes}</span>}
           </button>}
