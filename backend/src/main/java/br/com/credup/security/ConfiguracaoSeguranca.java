@@ -34,6 +34,7 @@ public class ConfiguracaoSeguranca {
                 .authorizeHttpRequests(a -> a
                         .requestMatchers("/api/auth/register", "/api/auth/login",
                                 "/api/auth/forgot-password",
+                                "/api/auth/refresh", "/api/auth/logout",
                                 "/api/webhooks/mercado-pago",
                                 "/actuator/health").permitAll()
                         .anyRequest().authenticated())
@@ -47,6 +48,7 @@ public class ConfiguracaoSeguranca {
         config.setAllowedOrigins(List.of(origin));
         config.setAllowedMethods(List.of("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
         var source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;

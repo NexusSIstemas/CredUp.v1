@@ -4,7 +4,7 @@ import { useSessao } from './hooks/useSessao'
 import { PaginaAlteracaoSenha } from './pages/PaginaAlteracaoSenha'
 
 export default function Aplicacao() {
-  const { sessao, setSessao, validando } = useSessao()
+  const { sessao, setSessao, validando, sair } = useSessao()
 
   if (validando) {
     return <main className="pagina-centralizada">
@@ -14,7 +14,7 @@ export default function Aplicacao() {
 
   if (!sessao) return <PaginaAutenticacao onAuth={setSessao} />
   if (sessao.deveAlterarSenha) {
-    return <PaginaAlteracaoSenha onChanged={setSessao} onLogout={() => setSessao(null)} />
+    return <PaginaAlteracaoSenha onChanged={setSessao} onLogout={sair} />
   }
-  return <PaginaPainel sessao={sessao} onSessaoChange={setSessao} onLogout={() => setSessao(null)} />
+  return <PaginaPainel sessao={sessao} onSessaoChange={setSessao} onLogout={sair} />
 }

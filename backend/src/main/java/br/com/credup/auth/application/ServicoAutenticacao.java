@@ -30,12 +30,13 @@ public class ServicoAutenticacao {
     private final RepositorioComercio commerces;
     private final RepositorioSolicitacaoRedefinicaoSenha solicitacoesRedefinicao;
     private final ServicoAssinatura assinaturas;
+    private final ServicoSessaoAtualizacao sessoesAtualizacao;
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String TEMP_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
 
     public ServicoAutenticacao(RepositorioUsuario users, RepositorioComerciante merchants, PasswordEncoder codificador, ServicoJwt jwt,
                        RepositorioComercio commerces, RepositorioSolicitacaoRedefinicaoSenha solicitacoesRedefinicao,
-                       ServicoAssinatura assinaturas) {
+                       ServicoAssinatura assinaturas, ServicoSessaoAtualizacao sessoesAtualizacao) {
         this.users = users;
         this.merchants = merchants;
         this.codificador = codificador;
@@ -43,10 +44,11 @@ public class ServicoAutenticacao {
         this.commerces = commerces;
         this.solicitacoesRedefinicao = solicitacoesRedefinicao;
         this.assinaturas = assinaturas;
+        this.sessoesAtualizacao = sessoesAtualizacao;
     }
 
     @Transactional
-    public RespostaAutenticacao register(SolicitacaoCadastro request) {
+    public ResultadoAutenticacao register(SolicitacaoCadastro request) {
         if (request.dataNascimento() != null
                 && request.dataNascimento().isAfter(LocalDate.now().minusYears(18)))
             throw new ExcecaoApi(HttpStatus.UNPROCESSABLE_ENTITY,
@@ -67,23 +69,38 @@ public class ServicoAutenticacao {
         merchant.setPerfilAcesso(PerfilAcesso.MERCHANT_OWNER);
         merchants.save(merchant);
         assinaturas.criarPara(merchant);
-        return response(merchant);
+        return criarSessao(merchant);
     }
 
     @Transactional(readOnly = true)
-    public RespostaAutenticacao login(SolicitacaoEntrada request) {
+    public ResultadoAutenticacao login(SolicitacaoEntrada request) {
         var user = users.findByEmailIgnoreCase(request.email())
                 .orElseThrow(() -> new ExcecaoApi(HttpStatus.UNAUTHORIZED, "Credenciais inválidas"));
         if (!user.isEnabled())
             throw new ExcecaoApi(HttpStatus.FORBIDDEN, "Acesso bloqueado pelo responsável");
         if (!codificador.matches(request.senha(), user.getSenha()))
             throw new ExcecaoApi(HttpStatus.UNAUTHORIZED, "Credenciais inválidas");
-        return response(user);
+        return criarSessao(user);
     }
 
     private RespostaAutenticacao response(br.com.credup.identity.domain.Usuario user) {
         return new RespostaAutenticacao(jwt.generate(user), user.getId(), user.getName(), user.getPerfilAcesso(),
                 user.deveAlterarSenha());
+    }
+
+    private ResultadoAutenticacao criarSessao(Usuario usuario) {
+        return new ResultadoAutenticacao(response(usuario), sessoesAtualizacao.criar(usuario));
+    }
+
+    @Transactional
+    public ResultadoAutenticacao atualizarSessao(String refreshToken) {
+        var rotacao = sessoesAtualizacao.rotacionar(refreshToken);
+        return new ResultadoAutenticacao(response(rotacao.usuario()), rotacao.token());
+    }
+
+    @Transactional
+    public void sair(String refreshToken) {
+        sessoesAtualizacao.revogar(refreshToken);
     }
 
     @Transactional
@@ -96,6 +113,7 @@ public class ServicoAutenticacao {
         user.setSenha(codificador.encode(request.novaSenha()));
         user.setDeveAlterarSenha(false);
         user.invalidarSessoes();
+        sessoesAtualizacao.revogarTodas(user);
         users.save(user);
         return new RespostaMensagem("Senha redefinida. Entre novamente usando a nova senha.");
     }
@@ -116,6 +134,8 @@ public class ServicoAutenticacao {
         String senhaTemporaria = senhaTemporaria();
         reset.getUsuario().setSenha(codificador.encode(senhaTemporaria));
         reset.getUsuario().setDeveAlterarSenha(true);
+        reset.getUsuario().invalidarSessoes();
+        sessoesAtualizacao.revogarTodas(reset.getUsuario());
         reset.setStatus(StatusRedefinicaoSenha.APPROVED);
         reset.setResolvedAt(Instant.now());
         return new RespostaDecisaoRedefinicao(senhaTemporaria);
@@ -129,7 +149,7 @@ public class ServicoAutenticacao {
     }
 
     @Transactional
-    public RespostaAutenticacao alterarSenha(br.com.credup.identity.domain.Usuario user, SolicitacaoAlteracaoSenha request) {
+    public ResultadoAutenticacao alterarSenha(br.com.credup.identity.domain.Usuario user, SolicitacaoAlteracaoSenha request) {
         if (!codificador.matches(request.senhaAtual(), user.getSenha()))
             throw new ExcecaoApi(HttpStatus.UNAUTHORIZED, "Senha temporária inválida");
         user.setSenha(codificador.encode(request.novaSenha()));
@@ -137,8 +157,9 @@ public class ServicoAutenticacao {
             user.setPinRecuperacaoHash(codificador.encode(request.pinRecuperacao()));
         user.setDeveAlterarSenha(false);
         user.invalidarSessoes();
+        sessoesAtualizacao.revogarTodas(user);
         users.save(user);
-        return response(user);
+        return criarSessao(user);
     }
 
     private SolicitacaoRedefinicaoSenha pending(UUID id) {
@@ -162,5 +183,10 @@ public class ServicoAutenticacao {
     private String maskPhone(String phone) {
         if (phone == null || phone.length() < 10) return "***";
         return "(" + phone.substring(0, 2) + ") *****-" + phone.substring(phone.length() - 4);
+    }
+
+    public record ResultadoAutenticacao(
+            RespostaAutenticacao resposta,
+            ServicoSessaoAtualizacao.TokenAtualizacao refreshToken) {
     }
 }

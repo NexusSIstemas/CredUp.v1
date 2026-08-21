@@ -19,7 +19,9 @@ server:
 app:
   jwt:
     secret: ${JWT_SECRET:change-this-development-secret-with-at-least-32-bytes}
-    expiration-minutes: ${JWT_EXPIRATION_MINUTES:480}
+    expiration-minutes: ${JWT_EXPIRATION_MINUTES:15}
+    refresh-expiration-hours: ${JWT_REFRESH_EXPIRATION_HOURS:8}
+    refresh-cookie-secure: ${JWT_REFRESH_COOKIE_SECURE:false}
   cors:
     allowed-origin: ${CORS_ALLOWED_ORIGIN:http://localhost:5173}
   pix:

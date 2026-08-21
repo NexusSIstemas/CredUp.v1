@@ -12,5 +12,7 @@ app:
   jwt:
     secret: test-secret-with-at-least-thirty-two-characters
     expiration-minutes: 60
+    refresh-expiration-hours: 8
+    refresh-cookie-secure: false
   cors:
     allowed-origin: http://localhost:5173

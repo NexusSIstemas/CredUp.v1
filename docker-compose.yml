@@ -22,6 +22,9 @@ services:
       DATABASE_USER: credup
       DATABASE_PASSWORD: credup
       JWT_SECRET: ${JWT_SECRET:-local-development-secret-change-before-production-123}
+      JWT_EXPIRATION_MINUTES: ${JWT_EXPIRATION_MINUTES:-15}
+      JWT_REFRESH_EXPIRATION_HOURS: ${JWT_REFRESH_EXPIRATION_HOURS:-8}
+      JWT_REFRESH_COOKIE_SECURE: "false"
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@credup.local}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-me-now}
       MERCADO_PAGO_AMBIENTE: ${MERCADO_PAGO_AMBIENTE:-sandbox}
