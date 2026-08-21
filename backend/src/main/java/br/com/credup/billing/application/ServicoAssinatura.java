@@ -3,8 +3,10 @@ package br.com.credup.billing.application;
 import br.com.credup.audit.domain.RegistroAuditoria;
 import br.com.credup.audit.repository.RepositorioRegistroAuditoria;
 import br.com.credup.billing.api.DtosAssinatura.RespostaAssinatura;
+import br.com.credup.billing.api.DtosAssinatura.RespostaPagamentoAssinatura;
 import br.com.credup.billing.domain.*;
 import br.com.credup.billing.repository.RepositorioAssinatura;
+import br.com.credup.billing.repository.RepositorioPagamentoAssinatura;
 import br.com.credup.identity.domain.*;
 import br.com.credup.shared.domain.PerfilAcesso;
 import br.com.credup.shared.exception.ExcecaoApi;
@@ -19,14 +21,17 @@ import java.util.*;
 @Service
 public class ServicoAssinatura {
     private final RepositorioAssinatura assinaturas;
+    private final RepositorioPagamentoAssinatura pagamentos;
     private final RepositorioRegistroAuditoria auditoria;
     private final ServicoConfiguracaoSistema configuracoes;
 
     public ServicoAssinatura(
             RepositorioAssinatura assinaturas,
+            RepositorioPagamentoAssinatura pagamentos,
             RepositorioRegistroAuditoria auditoria,
             ServicoConfiguracaoSistema configuracoes) {
         this.assinaturas = assinaturas;
+        this.pagamentos = pagamentos;
         this.auditoria = auditoria;
         this.configuracoes = configuracoes;
     }
@@ -65,6 +70,23 @@ public class ServicoAssinatura {
         return assinaturas.findAllByOrderByCreatedAtDesc().stream()
                 .peek(this::atualizarStatus)
                 .map(this::mapear)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<RespostaPagamentoAssinatura> listarMeuHistorico(Usuario usuario) {
+        var assinatura = obterDoUsuario(usuario);
+        return pagamentos.findByAssinaturaIdOrderByPagoEmDesc(assinatura.getId())
+                .stream()
+                .map(this::mapearPagamento)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<RespostaPagamentoAssinatura> listarHistoricoCompleto() {
+        return pagamentos.findAllByOrderByPagoEmDesc()
+                .stream()
+                .map(this::mapearPagamento)
                 .toList();
     }
 
@@ -146,6 +168,7 @@ public class ServicoAssinatura {
         assinatura.setCanceladaEm(null);
         assinatura.setPixStatus("CONCLUIDA");
         assinatura.setPixPagoEm(confirmadoEm);
+        registrarPagamentoConfirmado(assinatura, confirmadoEm);
         auditoria.save(RegistroAuditoria.of(
                 usuario,
                 "CONFIRMAR_PAGAMENTO_PIX",
@@ -154,6 +177,21 @@ public class ServicoAssinatura {
                 nomeComerciante(assinatura),
                 "Pagamento Pix confirmado pelo Mercado Pago; assinatura ativada por um ciclo mensal"));
         return confirmadoEm;
+    }
+
+    private void registrarPagamentoConfirmado(
+            Assinatura assinatura,
+            Instant confirmadoEm) {
+        if (pagamentos.existsByReferenciaExterna(assinatura.getPixTxid())) {
+            return;
+        }
+        var pagamento = new PagamentoAssinatura();
+        pagamento.setAssinatura(assinatura);
+        pagamento.setReferenciaExterna(assinatura.getPixTxid());
+        pagamento.setValor(assinatura.getPixValor());
+        pagamento.setPagoEm(confirmadoEm);
+        pagamento.setAcessoValidoAte(assinatura.getProximaCobranca());
+        pagamentos.save(pagamento);
     }
 
     private void atualizarCicloCobranca(Assinatura assinatura, LocalDate pagamentoEm) {
@@ -311,6 +349,10 @@ public class ServicoAssinatura {
                 assinatura.getInicioAssinatura(),
                 assinatura.getProximaCobranca(),
                 assinatura.getSolicitacaoAtivacaoEm(),
+                assinatura.getPixPagoEm() == null ? null : assinatura.getPixValor(),
+                assinatura.getPixPagoEm(),
+                assinatura.getCreatedAt(),
+                assinatura.getUpdatedAt(),
                 temAcessoOperacional(assinatura),
                 ativa);
     }
@@ -319,6 +361,18 @@ public class ServicoAssinatura {
         return assinatura.getComerciante().getName()
                 + " "
                 + assinatura.getComerciante().getSurname();
+    }
+
+    private RespostaPagamentoAssinatura mapearPagamento(
+            PagamentoAssinatura pagamento) {
+        var assinatura = pagamento.getAssinatura();
+        return new RespostaPagamentoAssinatura(
+                pagamento.getId(),
+                nomeComerciante(assinatura),
+                mascararEmail(assinatura.getComerciante().getEmail()),
+                pagamento.getValor(),
+                pagamento.getPagoEm(),
+                pagamento.getAcessoValidoAte());
     }
 
     private String mascararEmail(String email) {

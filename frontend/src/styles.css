@@ -307,6 +307,12 @@ td { padding:.9rem .75rem; border-bottom:1px solid #f0f2f1; font-size:.9rem; }
 .filtros-assinaturas { display:grid; grid-template-columns:minmax(220px,1fr) minmax(180px,.6fr); gap:.6rem; width:min(520px,100%); }
 .filtros-assinaturas label,.filtros-assinaturas input,.filtros-assinaturas select { margin:0; }
 .estatisticas-assinaturas { margin-bottom:1rem; }
+.cabecalho-relatorio-assinatura { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
+.cabecalho-relatorio-assinatura small { color:#18734f; font-size:.7rem; font-weight:800; letter-spacing:.12em; }
+.cabecalho-relatorio-assinatura h2 { margin:.3rem 0 0; }
+.tabela-relatorio-assinaturas td strong,.tabela-relatorio-assinaturas td small { display:block; }
+.tabela-relatorio-assinaturas td small { margin-top:.2rem; color:#78857e; }
+.nota-relatorio-assinatura { display:block; margin-top:1rem; color:#78857e; }
 .cobranca-pix { display:grid; gap:.7rem; margin-top:1rem; padding:1rem; border:1px solid #cbded2; border-radius:14px; background:#f7fbf8; }
 .cobranca-pix img { width:min(260px,100%); border-radius:10px; background:#fff; }
 .cobranca-pix textarea { min-height:90px; resize:none; overflow-wrap:anywhere; }

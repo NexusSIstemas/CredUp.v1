@@ -97,7 +97,11 @@ class ServicoAssinaturaTest {
         when(configuracoes.obter()).thenReturn(configuracao);
 
         return new Cenario(
-                new ServicoAssinatura(repositorio, auditoria, configuracoes),
+                new ServicoAssinatura(
+                        repositorio,
+                        mock(br.com.credup.billing.repository.RepositorioPagamentoAssinatura.class),
+                        auditoria,
+                        configuracoes),
                 comerciante,
                 assinatura);
     }

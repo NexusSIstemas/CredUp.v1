@@ -2,6 +2,7 @@ package br.com.credup.billing.api;
 
 import br.com.credup.billing.domain.*;
 import java.time.*;
+import java.math.BigDecimal;
 import java.util.UUID;
 
 public final class DtosAssinatura {
@@ -18,7 +19,20 @@ public final class DtosAssinatura {
             LocalDate inicioAssinatura,
             LocalDate proximaCobranca,
             Instant solicitacaoAtivacaoEm,
+            BigDecimal valorUltimoPagamento,
+            Instant ultimoPagamentoEm,
+            Instant criadaEm,
+            Instant atualizadaEm,
             boolean acessoOperacional,
             boolean podeGerarRelatorio) {
+    }
+
+    public record RespostaPagamentoAssinatura(
+            UUID id,
+            String nomeGestor,
+            String emailMascarado,
+            BigDecimal valor,
+            Instant pagoEm,
+            LocalDate acessoValidoAte) {
     }
 }
