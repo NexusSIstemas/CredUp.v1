@@ -16,8 +16,9 @@ public final class DtosInadimplencia {
     public record SolicitacaoCliente(
             @NotBlank String nome,
             @NotBlank String sobrenome,
-            @Size(max = 120) String apelido,
             @NotBlank
+            @Size(max = 120)
+            String apelido,
             @CPF(message = "CPF inválido")
             String cpf,
             @Pattern(
