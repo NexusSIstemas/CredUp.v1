@@ -26,7 +26,7 @@ public class ControladorComercio {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.create(user, request));
     }
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN_REDE','MERCHANT_OWNER')")
+    @PreAuthorize("hasAnyRole('ADMIN_REDE','MERCHANT_OWNER','MERCHANT_STAFF')")
     List<RespostaComercio> list(@AuthenticationPrincipal Usuario user,
                                 @RequestParam(required = false) StatusComercio status) {
         return service.list(user, status);
