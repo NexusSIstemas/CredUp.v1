@@ -17,8 +17,8 @@ export type SecaoPainel =
 
 export const ROTULOS_PERFIL: Record<PerfilAcesso, string> = {
   ADMIN_REDE: 'Administrador da rede',
-  MERCHANT_OWNER: 'Dono de comércio',
-  MERCHANT_STAFF: 'Funcionário do comércio'
+  MERCHANT_OWNER: 'Gestor',
+  MERCHANT_STAFF: 'Operador'
 }
 
 export const ROTULOS_STATUS_COMERCIO: Record<StatusComercio, string> = {
@@ -64,11 +64,11 @@ const ROTULOS_ACAO: Record<string, string> = {
   VIEW_FULL_CPF: 'Consultou os dados de um cliente',
   VIEW_OWN_PROFILE: 'Visualizou o próprio perfil',
   UPDATE_OWN_PROFILE: 'Atualizou o próprio perfil',
-  CREATE_STAFF: 'Criou um funcionário',
-  ENABLE_STAFF: 'Reativou um funcionário',
-  DISABLE_STAFF: 'Bloqueou um funcionário',
-  RESET_STAFF_PASSWORD: 'Redefiniu a senha de um funcionário',
-  DELETE_STAFF: 'Excluiu um funcionário',
+  CREATE_STAFF: 'Criou um operador',
+  ENABLE_STAFF: 'Reativou um operador',
+  DISABLE_STAFF: 'Bloqueou um operador',
+  RESET_STAFF_PASSWORD: 'Redefiniu a senha de um operador',
+  DELETE_STAFF: 'Excluiu um operador',
   CRIAR_DIVIDA: 'Cadastrou uma dívida',
   DAR_BAIXA_DIVIDA: 'Deu baixa em uma dívida',
   CRIAR_COMERCIO: 'Cadastrou um comércio',

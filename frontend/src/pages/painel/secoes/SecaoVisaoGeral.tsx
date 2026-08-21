@@ -42,7 +42,7 @@ export function SecaoVisaoGeral({
     <div className="grade-visao-geral">
       {!funcionario && <button className="atalho-visao-geral" onClick={() => abrirSecao('commerces')}><span>01</span><div><strong>Gerenciar comércios</strong><small>Cadastros, aprovações e situação dos mercados</small></div><b>→</b></button>}
       <button className="atalho-visao-geral" onClick={() => abrirSecao('defaults')}><span>{funcionario ? '01' : '02'}</span><div><strong>Consultar inadimplentes</strong><small>Buscas, informações e situação dos clientes</small></div><b>→</b></button>
-      {dono && <button className="atalho-visao-geral" onClick={() => abrirSecao('staff')}><span>03</span><div><strong>Gerenciar funcionários</strong><small>{funcionarios.length} funcionário(s) vinculado(s)</small></div><b>→</b></button>}
+      {dono && <button className="atalho-visao-geral" onClick={() => abrirSecao('staff')}><span>03</span><div><strong>Gerenciar operadores</strong><small>{funcionarios.length} operador(es) vinculado(s)</small></div><b>→</b></button>}
       {administrador && <button className="atalho-visao-geral" onClick={() => abrirSecao('recovery')}><span>03</span><div><strong>Recuperar acessos</strong><small>{solicitacoes.length} solicitação(ões) aguardando análise</small></div><b>→</b></button>}
     </div>
   </section>

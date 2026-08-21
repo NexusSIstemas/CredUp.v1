@@ -396,7 +396,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
       })
       formElement.reset()
       setStaffPassword(result.senhaTemporaria)
-      showAlert('Funcionário criado. Entregue a senha temporária após confirmar a identidade.', 'sucesso')
+      showAlert('Operador criado. Entregue a senha temporária após confirmar a identidade.', 'sucesso')
       loadStaff()
     } catch (erro) { showError(erro) }
   }
@@ -409,8 +409,8 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
       })
       showAlert(
         funcionario.ativo
-          ? 'Acesso do funcionário bloqueado.'
-          : 'Acesso do funcionário reativado.',
+          ? 'Acesso do operador bloqueado.'
+          : 'Acesso do operador reativado.',
         'sucesso'
       )
       loadStaff()
@@ -428,13 +428,13 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
 
   async function deleteStaff(funcionario: Funcionario) {
     const confirmed = await confirmarExclusao(
-      'Excluir funcionário?',
-      `O funcionário "${funcionario.nome} ${funcionario.sobrenome}" será excluído. Esta ação não poderá ser desfeita.`
+      'Excluir operador?',
+      `O operador "${funcionario.nome} ${funcionario.sobrenome}" será excluído. Esta ação não poderá ser desfeita.`
     )
     if (!confirmed) return
     try {
       await api(`/staff/${funcionario.id}`, { method: 'DELETE' })
-      showAlert('Funcionário excluído.', 'sucesso')
+      showAlert('Operador excluído.', 'sucesso')
       loadStaff()
     } catch (erro) { showError(erro) }
   }
@@ -718,7 +718,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
             </section>
             <section className="painel-conteudo">
               <div className="cabecalho-painel-conteudo"><div><h2>PIN de recuperação</h2><p>{perfil.pinRecuperacaoConfigurado ? 'Seu PIN está configurado. Você pode substituí-lo abaixo.' : 'Configure o PIN para recuperar sua conta sem depender do administrador.'}</p></div></div>
-              <div className="aviso-pin"><strong>⚠ Dado sensível: guarde este PIN</strong><p>O PIN tem 6 números, não será exibido novamente e será necessário se você esquecer a senha. Não compartilhe com funcionários ou terceiros.</p></div>
+              <div className="aviso-pin"><strong>⚠ Dado sensível: guarde este PIN</strong><p>O PIN tem 6 números, não será exibido novamente e será necessário se você esquecer a senha. Não compartilhe com operadores ou terceiros.</p></div>
               <form className="formulario-compacto" onSubmit={configurarPin}>
                 <CampoFlutuante label="Senha atual"><input name="senhaAtual" type="password" placeholder=" " required /></CampoFlutuante>
                 <div className="grade-formulario"><CampoFlutuante label="Novo PIN (6 números)"><input name="pin" type="password" inputMode="numeric" minLength={6} maxLength={6} pattern="\d{6}" placeholder=" " required onInput={event => { event.currentTarget.value = event.currentTarget.value.replace(/\D/g, '').slice(0, 6) }} /></CampoFlutuante><CampoFlutuante label="Confirmar PIN"><input name="confirmacaoPin" type="password" inputMode="numeric" minLength={6} maxLength={6} pattern="\d{6}" placeholder=" " required onInput={event => { event.currentTarget.value = event.currentTarget.value.replace(/\D/g, '').slice(0, 6) }} /></CampoFlutuante></div>
