@@ -6,7 +6,7 @@ import {
   type TomAlerta
 } from '../services/alertas'
 import { CampoFlutuante } from '../components/CampoFlutuante'
-import type { Assinatura, CobrancaPix, StatusCobrancaPix, Comercio, ConfiguracaoPublica, Divida, Funcionario, Pagina, SolicitacaoRedefinicaoSenha, Perfil, RegistroAuditoria, Sessao } from '../types'
+import type { Assinatura, CobrancaPix, StatusCobrancaPix, Comercio, ConfiguracaoPublica, Divida, Funcionario, Pagina, SolicitacaoRedefinicaoSenha, Perfil, RegistroAuditoria, Sessao, StatusComercio } from '../types'
 import {
   CLASSES_STATUS_COMERCIO,
   CLASSES_STATUS_DIVIDA,
@@ -164,7 +164,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
     return () => window.clearInterval(interval)
   }, [pixCharge?.txid, pixCharge?.status])
 
-  function openSecao(next: Secao) {
+  function openSecao(next: SecaoPainel) {
     if (owner && subscriptionLoaded && !subscription?.acessoOperacional
       && ['defaults', 'staff'].includes(next)) {
       showAlert('Seu acesso operacional está bloqueado. Consulte sua assinatura.', 'alerta')
