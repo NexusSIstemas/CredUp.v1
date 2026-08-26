@@ -1,8 +1,9 @@
-import { FormEvent, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 import { api } from '../services/api'
 import { mostrarAlerta } from '../services/alertas'
 import { CampoFlutuante } from '../components/CampoFlutuante'
-import type { Sessao } from '../types'
+import { CarrosselPlanos } from '../components/CarrosselPlanos'
+import type { PlanoComercial, Sessao } from '../types'
 
 function onlyDigits(value: FormDataEntryValue | null) {
   return String(value ?? '').replace(/\D/g, '')
@@ -34,6 +35,13 @@ export function PaginaAutenticacao({ onAuth }: { onAuth: (session: Sessao) => vo
   const [showPassword, setShowPassword] = useState(false)
   const [showPin, setShowPin] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [planos, setPlanos] = useState<PlanoComercial[]>([])
+
+  useEffect(() => {
+    api<PlanoComercial[]>('/assinaturas/planos')
+      .then(setPlanos)
+      .catch(() => setPlanos([]))
+  }, [])
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -86,6 +94,10 @@ export function PaginaAutenticacao({ onAuth }: { onAuth: (session: Sessao) => vo
         <p className="sobretitulo">Crédito com mais contexto</p>
         <h1>Decisões mais seguras para o comércio local.</h1>
         <p>A rede colaborativa que ajuda comerciantes a consultar e gerir inadimplências com responsabilidade.</p>
+        <div className="divulgacao-planos-autenticacao">
+          <p className="sobretitulo">Planos para cada fase</p>
+          <CarrosselPlanos planos={planos} compacto />
+        </div>
       </div>
       <small>Informação protegida. Acesso rastreável.</small>
     </section>

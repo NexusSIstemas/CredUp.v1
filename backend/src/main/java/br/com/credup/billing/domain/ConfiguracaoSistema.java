@@ -17,7 +17,6 @@ public class ConfiguracaoSistema extends EntidadeBase {
 
     @Column(name = "dias_tolerancia_pagamento", nullable = false)
     private int diasToleranciaPagamento;
-
     public String getNomePlano() {
         return nomePlano;
     }

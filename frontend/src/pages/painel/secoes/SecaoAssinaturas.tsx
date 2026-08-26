@@ -1,5 +1,6 @@
 import { CampoFlutuante } from '../../../components/CampoFlutuante'
-import type { Assinatura, CobrancaPix, ConfiguracaoPublica, PagamentoAssinatura } from '../../../types'
+import { CarrosselPlanos } from '../../../components/CarrosselPlanos'
+import type { Assinatura, CobrancaPix, ConfiguracaoPublica, PagamentoAssinatura, PlanoComercial } from '../../../types'
 import { ROTULOS_STATUS_ASSINATURA } from '../constantes'
 
 interface PropriedadesSecaoAssinaturas {
@@ -10,6 +11,7 @@ interface PropriedadesSecaoAssinaturas {
   assinaturasFiltradas: Assinatura[]
   historico: PagamentoAssinatura[]
   configuracao: ConfiguracaoPublica | null
+  planos: PlanoComercial[]
   busca: string
   situacao: string
   cobrancaPix: CobrancaPix | null
@@ -17,7 +19,7 @@ interface PropriedadesSecaoAssinaturas {
   alterarBusca: (valor: string) => void
   alterarSituacao: (valor: string) => void
   gerarCobrancaPix: () => void
-  cancelarAssinatura: (id: string) => void
+  escolherPlano: (codigo: string) => void
   copiarPix: (codigo: string) => void
 }
 
@@ -42,6 +44,7 @@ export function SecaoAssinaturas({
   assinaturasFiltradas,
   historico,
   configuracao,
+  planos,
   busca,
   situacao,
   cobrancaPix,
@@ -49,7 +52,7 @@ export function SecaoAssinaturas({
   alterarBusca,
   alterarSituacao,
   gerarCobrancaPix,
-  cancelarAssinatura,
+  escolherPlano,
   copiarPix
 }: PropriedadesSecaoAssinaturas) {
   return <section className="visualizacao-secao animar-entrada" key="assinatura">
@@ -68,9 +71,7 @@ export function SecaoAssinaturas({
         <div className="cabecalho-relatorio-assinatura">
           <div>
             <small>VISUALIZANDO SUA ASSINATURA</small>
-            <h2>{configuracao
-              ? `Plano ${configuracao.nomePlano.toLocaleLowerCase('pt-BR')}`
-              : 'Plano CredUp'}</h2>
+            <h2>Plano {assinatura.plano.nome}</h2>
           </div>
           <span className={`selo-assinatura ${assinatura.status.toLowerCase()}`}>
             {ROTULOS_STATUS_ASSINATURA[assinatura.status]}
@@ -84,11 +85,12 @@ export function SecaoAssinaturas({
               ? `O pagamento está no período de tolerância de ${configuracao?.diasToleranciaPagamento ?? '—'} dias. Seu acesso permanece liberado enquanto aguardamos a confirmação.`
               : 'As funções operacionais estão bloqueadas até a confirmação do pagamento.'}</p>
         <dl className="detalhes-assinatura">
-          <div><dt>Mensalidade</dt><dd>{formatarMoeda(configuracao?.valorMensal)}</dd></div>
+          <div><dt>Mensalidade</dt><dd>{formatarMoeda(assinatura.plano.valorMensal)}</dd></div>
           <div><dt>Próximo vencimento</dt><dd>{formatarData(assinatura.proximaCobranca, 'Após o primeiro pagamento')}</dd></div>
           <div><dt>Acesso ao sistema</dt><dd>{assinatura.acessoOperacional ? 'Liberado' : 'Bloqueado'}</dd></div>
         </dl>
-        {gestor && ['AGUARDANDO_PAGAMENTO', 'EXPIRADA', 'ATRASADA', 'CANCELADA'].includes(assinatura.status) &&
+        {assinatura.proximoPlano && <p className="aviso-plano-pendente"><strong>Alteração pendente:</strong> plano {assinatura.proximoPlano.nome}. O novo plano será liberado após a confirmação do pagamento de {formatarMoeda(assinatura.proximoPlano.valorMensal)}.</p>}
+        {gestor && (assinatura.proximoPlano != null || ['AGUARDANDO_PAGAMENTO', 'EXPIRADA', 'ATRASADA', 'CANCELADA'].includes(assinatura.status)) &&
           <button disabled={gerandoPix} onClick={gerarCobrancaPix}>
             {gerandoPix ? 'Gerando cobrança...' : 'Pagar assinatura com Pix'}
           </button>}
@@ -105,6 +107,16 @@ export function SecaoAssinaturas({
           </p>
           <small>{cobrancaPix.avisoConfirmacao}</small>
         </div>}
+      </section>
+
+      <section className="painel-conteudo">
+        <div className="cabecalho-painel-conteudo"><div><h2>Planos CredUp</h2><p>Todos permitem cadastrar seus comércios. Escolha conforme sua equipe e os recursos de gestão.</p></div></div>
+        <CarrosselPlanos
+          planos={planos}
+          codigoAtual={assinatura.plano.codigo}
+          codigoPendente={assinatura.proximoPlano?.codigo}
+          escolherPlano={escolherPlano}
+        />
       </section>
 
       <section className="painel-conteudo">
@@ -144,7 +156,7 @@ export function SecaoAssinaturas({
         </div>
         <div className="envoltorio-tabela">
           <table className="tabela-relatorio-assinaturas">
-            <thead><tr><th>Gestor</th><th>Situação</th><th>Início</th><th>Último pagamento</th><th>Valor pago</th><th>Vencimento</th><th>Acesso</th><th></th></tr></thead>
+            <thead><tr><th>Gestor</th><th>Situação</th><th>Início</th><th>Último pagamento</th><th>Valor pago</th><th>Vencimento</th><th>Acesso</th></tr></thead>
             <tbody>{assinaturasFiltradas.map(item => <tr key={item.id}>
               <td><strong>{item.nomeComerciante}</strong><small>{item.emailMascarado}</small></td>
               <td><span className={`indicador ${item.acessoOperacional ? 'aprovado' : 'rejeitado'}`}>{ROTULOS_STATUS_ASSINATURA[item.status]}</span></td>
@@ -153,8 +165,7 @@ export function SecaoAssinaturas({
               <td>{formatarMoeda(item.valorUltimoPagamento)}</td>
               <td>{formatarData(item.proximaCobranca)}</td>
               <td>{item.acessoOperacional ? 'Liberado' : 'Bloqueado'}</td>
-              <td><button className="pequeno perigo" disabled={item.status === 'CANCELADA'} onClick={() => cancelarAssinatura(item.id)}>Cancelar</button></td>
-            </tr>)}{!assinaturasFiltradas.length && <tr><td colSpan={8} className="vazio">Nenhuma assinatura encontrada com esses filtros.</td></tr>}</tbody>
+            </tr>)}{!assinaturasFiltradas.length && <tr><td colSpan={7} className="vazio">Nenhuma assinatura encontrada com esses filtros.</td></tr>}</tbody>
           </table>
         </div>
       </section>

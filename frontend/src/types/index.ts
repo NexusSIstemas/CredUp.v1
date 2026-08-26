@@ -1,7 +1,6 @@
 export type PerfilAcesso = 'ADMIN_REDE' | 'MERCHANT_OWNER' | 'MERCHANT_STAFF'
 export type StatusComercio = 'PENDING' | 'APPROVED' | 'REJECTED'
 export type StatusDivida = 'PENDING' | 'DISPUTED' | 'NEGOTIATING' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELED'
-export type PlanoAssinatura = 'PROFISSIONAL'
 export type StatusAssinatura = 'AGUARDANDO_APROVACAO' | 'AGUARDANDO_PAGAMENTO' | 'ATIVA' | 'ATRASADA' | 'EXPIRADA' | 'CANCELADA'
 
 export interface ConfiguracaoPublica {
@@ -10,12 +9,25 @@ export interface ConfiguracaoPublica {
   diasToleranciaPagamento: number
 }
 
+export interface PlanoComercial {
+  codigo: 'ESSENCIAL' | 'GESTAO' | 'REDE'
+  nome: string
+  valorMensal: number
+  limiteOperadores: number
+  mesesHistorico: number
+  relatoriosCompletos: boolean
+  centralCobranca: boolean
+  indicadoresAvancados: boolean
+  importacaoExportacao: boolean
+}
+
 export interface Assinatura {
   id: string
   idComerciante: string
   nomeComerciante: string
   emailMascarado: string
-  plano: PlanoAssinatura
+  plano: PlanoComercial
+  proximoPlano: PlanoComercial | null
   status: StatusAssinatura
   inicioAssinatura: string | null
   proximaCobranca: string | null

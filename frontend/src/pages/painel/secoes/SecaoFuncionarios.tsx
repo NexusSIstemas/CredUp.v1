@@ -5,6 +5,7 @@ import { dataMaximaNascimento, mascararCpf, mascararTelefone } from '../formatad
 
 interface Propriedades {
   funcionarios: Funcionario[]
+  limiteOperadores: number
   senhaTemporaria: string
   dadosVisiveis: boolean
   criar: (evento: FormEvent<HTMLFormElement>) => void
@@ -16,6 +17,7 @@ interface Propriedades {
 
 export function SecaoFuncionarios({
   funcionarios,
+  limiteOperadores,
   senhaTemporaria,
   dadosVisiveis,
   criar,
@@ -24,12 +26,15 @@ export function SecaoFuncionarios({
   excluir,
   fecharSenha
 }: Propriedades) {
+  const operadoresAtivos = funcionarios.filter(funcionario => funcionario.ativo).length
+  const limiteAtingido = operadoresAtivos >= limiteOperadores
+
   return <section className="visualizacao-secao animar-entrada">
     <div className="titulo-secao"><div><p className="sobretitulo">Equipe</p><h2>Operadores</h2></div><p>Crie acessos individuais e acompanhe quem pode consultar a rede em nome dos seus comércios.</p></div>
     {senhaTemporaria && <div className="senha-temporaria animar-entrada"><div><small>Senha temporária — exibida somente agora</small><strong>{senhaTemporaria}</strong></div><button onClick={() => navigator.clipboard.writeText(senhaTemporaria)}>Copiar senha</button><button className="perigo" onClick={fecharSenha}>Fechar</button></div>}
     <div className="colunas-secao">
       <section className="painel-conteudo">
-        <div className="cabecalho-painel-conteudo"><div><h2>Equipe cadastrada</h2><p>{funcionarios.length} operador(es) vinculado(s) à sua conta.</p></div></div>
+        <div className="cabecalho-painel-conteudo"><div><h2>Equipe cadastrada</h2><p>{operadoresAtivos} de {limiteOperadores} operador(es) ativo(s) no seu plano.</p></div></div>
         <div className="lista-funcionarios">{funcionarios.map(funcionario => <article className="cartao-funcionario" key={funcionario.id}>
           <div className="avatar-funcionario">{funcionario.nome[0]}{funcionario.sobrenome[0]}</div>
           <div className="informacoes-funcionario"><strong>{funcionario.nome} {funcionario.sobrenome}</strong>
@@ -43,14 +48,15 @@ export function SecaoFuncionarios({
           {!funcionarios.length && <p className="vazio">Nenhum operador cadastrado.</p>}</div>
       </section>
       <section className="painel-conteudo painel-fixo"><h2>Novo operador</h2><p className="suave">O operador receberá uma senha temporária e deverá trocá-la no primeiro acesso.</p>
-        <form className="formulario-compacto" onSubmit={criar}>
+        {limiteAtingido && <div className="aviso-limite-operadores"><strong>Limite de operadores atingido</strong><p>Seu plano inclui {limiteOperadores} operador(es) ativo(s). Bloqueie um acesso existente para liberar uma vaga ou solicite Operadores adicionais por uma pequena taxa mensal.</p></div>}
+        {!limiteAtingido && <form className="formulario-compacto" onSubmit={criar}>
           <div className="grade-formulario"><CampoFlutuante label="Nome"><input name="nome" placeholder=" " required /></CampoFlutuante><CampoFlutuante label="Sobrenome"><input name="sobrenome" placeholder=" " required /></CampoFlutuante></div>
           <CampoFlutuante label="CPF: 000.000.000-00"><input name="cpf" inputMode="numeric" maxLength={14} placeholder=" " onInput={evento => { evento.currentTarget.value = mascararCpf(evento.currentTarget.value) }} required /></CampoFlutuante>
           <CampoFlutuante label="Telefone: (11) 99999-9999"><input name="telefone" inputMode="tel" maxLength={15} placeholder=" " onInput={evento => { evento.currentTarget.value = mascararTelefone(evento.currentTarget.value) }} required /></CampoFlutuante>
           <CampoFlutuante label="E-mail: funcionario@mercado.com.br"><input name="email" type="email" placeholder=" " required /></CampoFlutuante>
           <CampoFlutuante label="Data de nascimento (opcional)"><input name="dataNascimento" type="date" max={dataMaximaNascimento()} placeholder=" " onInvalid={evento => evento.currentTarget.setCustomValidity('O usuário deve ter pelo menos 18 anos')} onInput={evento => evento.currentTarget.setCustomValidity('')} /></CampoFlutuante>
           <button>Criar acesso do operador</button>
-        </form>
+        </form>}
       </section>
     </div>
   </section>

@@ -313,6 +313,17 @@ td { padding:.9rem .75rem; border-bottom:1px solid #f0f2f1; font-size:.9rem; }
 .tabela-relatorio-assinaturas td strong,.tabela-relatorio-assinaturas td small { display:block; }
 .tabela-relatorio-assinaturas td small { margin-top:.2rem; color:#78857e; }
 .nota-relatorio-assinatura { display:block; margin-top:1rem; color:#78857e; }
+.aviso-limite-operadores { margin-top:1rem; padding:1rem; border:1px solid #ead28e; border-radius:12px; color:#72530c; background:#fff6d9; }
+.aviso-limite-operadores p { margin:.35rem 0 0; }
+.grade-planos { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; margin-top:1rem; }
+.cartao-plano { display:flex; flex-direction:column; gap:1rem; padding:1.2rem; border:1px solid #dfe8e2; border-radius:16px; background:#fff; }
+.cartao-plano.atual { border:2px solid #18734f; background:#f3fbf6; }
+.cartao-plano small { color:#18734f; font-size:.65rem; font-weight:800; letter-spacing:.1em; }
+.cartao-plano h3 { margin:.35rem 0; font-size:1.35rem; }
+.cartao-plano strong { font-size:1.5rem; }
+.cartao-plano strong span { color:#78857e; font-size:.75rem; }
+.cartao-plano ul { display:grid; gap:.5rem; flex:1; margin:0; padding-left:1.1rem; color:#536159; }
+.aviso-plano-pendente { padding:.85rem 1rem; border:1px solid #ead28e; border-radius:12px; color:#72530c; background:#fff6d9; }
 .cobranca-pix { display:grid; gap:.7rem; margin-top:1rem; padding:1rem; border:1px solid #cbded2; border-radius:14px; background:#f7fbf8; }
 .cobranca-pix img { width:min(260px,100%); border-radius:10px; background:#fff; }
 .cobranca-pix textarea { min-height:90px; resize:none; overflow-wrap:anywhere; }
@@ -335,7 +346,7 @@ td { padding:.9rem .75rem; border-bottom:1px solid #f0f2f1; font-size:.9rem; }
   .navegacao-superior { width:100%; overflow-x:auto; }
   .estatisticas,.estatisticas.duas-colunas,.colunas,.colunas-secao,.grade-visao-geral,.estrutura-perfil { grid-template-columns:1fr; }
   .filtros-relatorio { grid-template-columns:1fr 1fr; }
-  .detalhes-assinatura,.item-assinatura,.filtros-assinaturas { grid-template-columns:1fr; }
+  .detalhes-assinatura,.item-assinatura,.filtros-assinaturas,.grade-planos { grid-template-columns:1fr; }
   .cabecalho-painel-conteudo { align-items:stretch; flex-direction:column; }
   .titulo-secao { align-items:flex-start; flex-direction:column; gap:.5rem; }
   .titulo-secao>p { text-align:left; }
@@ -345,4 +356,107 @@ td { padding:.9rem .75rem; border-bottom:1px solid #f0f2f1; font-size:.9rem; }
   .grade-formulario { grid-template-columns:1fr; }
   .filtros-relatorio { grid-template-columns:1fr; }
   .estatisticas { gap:.6rem; }
+}
+.carrossel-planos {
+  position: relative;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 520px) 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding-bottom: 28px;
+}
+
+.carrossel-planos .cartao-plano {
+  min-height: 360px;
+  animation: entrada-secao .28s ease both;
+}
+
+.controle-carrossel {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  padding: 0;
+  font-size: 2rem;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+
+.indicadores-carrossel {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+}
+
+.indicadores-carrossel button {
+  width: 9px;
+  height: 9px;
+  min-height: 0;
+  padding: 0;
+  border-radius: 50%;
+  background: #b8c8c0;
+}
+
+.indicadores-carrossel button.ativo {
+  width: 26px;
+  border-radius: 8px;
+  background: var(--verde);
+}
+
+.divulgacao-planos-autenticacao {
+  margin-top: 28px;
+  max-width: 430px;
+}
+
+.carrossel-planos.compacto {
+  grid-template-columns: 34px minmax(0, 340px) 34px;
+  gap: 8px;
+}
+
+.carrossel-planos.compacto .cartao-plano {
+  min-height: 245px;
+  padding: 20px;
+  background: rgba(255, 255, 255, .1);
+  color: #fff;
+  border-color: rgba(255, 255, 255, .24);
+  box-shadow: none;
+}
+
+.carrossel-planos.compacto .cartao-plano small,
+.carrossel-planos.compacto .cartao-plano span {
+  color: #b9ead2;
+}
+
+.carrossel-planos.compacto .cartao-plano ul {
+  margin-bottom: 0;
+}
+
+.carrossel-planos.compacto .controle-carrossel {
+  width: 34px;
+  height: 34px;
+  background: rgba(255, 255, 255, .15);
+}
+
+.carrossel-planos.compacto .indicadores-carrossel button {
+  background: rgba(255, 255, 255, .35);
+}
+
+.carrossel-planos.compacto .indicadores-carrossel button.ativo {
+  background: #fff;
+}
+
+@media (max-width: 720px) {
+  .carrossel-planos,
+  .carrossel-planos.compacto {
+    grid-template-columns: 32px minmax(0, 1fr) 32px;
+    gap: 6px;
+  }
+
+  .divulgacao-planos-autenticacao {
+    display: none;
+  }
 }
