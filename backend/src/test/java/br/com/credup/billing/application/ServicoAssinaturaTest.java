@@ -3,7 +3,7 @@ package br.com.credup.billing.application;
 import br.com.credup.audit.repository.RepositorioRegistroAuditoria;
 import br.com.credup.billing.domain.Assinatura;
 import br.com.credup.billing.domain.ConfiguracaoSistema;
-import br.com.credup.billing.domain.PlanoAssinatura;
+import br.com.credup.billing.domain.PlanoComercial;
 import br.com.credup.billing.domain.StatusAssinatura;
 import br.com.credup.billing.repository.RepositorioAssinatura;
 import br.com.credup.identity.domain.Comerciante;
@@ -85,7 +85,10 @@ class ServicoAssinaturaTest {
 
         var assinatura = new Assinatura();
         assinatura.setComerciante(comerciante);
-        assinatura.setPlano(PlanoAssinatura.PROFISSIONAL);
+        var plano = mock(PlanoComercial.class);
+        when(plano.isRelatoriosCompletos()).thenReturn(true);
+        when(plano.getMesesHistorico()).thenReturn(24);
+        assinatura.setPlano(plano);
         assinatura.setStatus(status);
         assinatura.setProximaCobranca(vencimento);
 
@@ -100,6 +103,7 @@ class ServicoAssinaturaTest {
                 new ServicoAssinatura(
                         repositorio,
                         mock(br.com.credup.billing.repository.RepositorioPagamentoAssinatura.class),
+                        mock(br.com.credup.billing.repository.RepositorioPlanoComercial.class),
                         auditoria,
                         configuracoes),
                 comerciante,

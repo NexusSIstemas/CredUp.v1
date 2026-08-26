@@ -45,7 +45,8 @@ public class ServicoFuncionario {
     @Transactional
     public RespostaFuncionarioCriado create(Usuario current, SolicitacaoCriacaoFuncionario request) {
         assinaturas.exigirAcessoOperacional(current);
-        Comerciante owner = owner(current);
+        Comerciante owner = ownerParaAlteracao(current);
+        exigirVagaDisponivel(owner);
         if (users.existsByEmailIgnoreCase(request.email()))
             throw new ExcecaoApi(HttpStatus.CONFLICT, "E-mail já cadastrado");
         if (users.existsByCpf(request.cpf()))
@@ -83,8 +84,11 @@ public class ServicoFuncionario {
     @Transactional
     public RespostaFuncionario changeStatus(Usuario current, UUID id, SolicitacaoStatusFuncionario request) {
         assinaturas.exigirAcessoOperacional(current);
-        Comerciante owner = owner(current);
+        Comerciante owner = ownerParaAlteracao(current);
         var employee = findOwned(owner, id);
+        if (request.ativo() && !employee.isEnabled()) {
+            exigirVagaDisponivel(owner);
+        }
         employee.setEnabled(request.ativo());
         auditLogs.save(RegistroAuditoria.of(owner, request.ativo() ? "ENABLE_STAFF" : "DISABLE_STAFF",
                 "FuncionarioComercio", employee.getId(), employee.getName() + " " + employee.getSurname(),
@@ -95,8 +99,11 @@ public class ServicoFuncionario {
     @Transactional
     public RespostaSenhaFuncionario resetSenha(Usuario current, UUID id) {
         assinaturas.exigirAcessoOperacional(current);
-        Comerciante owner = owner(current);
+        Comerciante owner = ownerParaAlteracao(current);
         var employee = findOwned(owner, id);
+        if (!employee.isEnabled()) {
+            exigirVagaDisponivel(owner);
+        }
         String senha = senhaTemporaria();
         employee.setSenha(codificador.encode(senha));
         employee.setDeveAlterarSenha(true);
@@ -112,7 +119,7 @@ public class ServicoFuncionario {
     @Transactional
     public void delete(Usuario current, UUID id) {
         assinaturas.exigirAcessoOperacional(current);
-        Comerciante owner = owner(current);
+        Comerciante owner = ownerParaAlteracao(current);
         var employee = findOwned(owner, id);
         auditLogs.save(RegistroAuditoria.of(owner, "DELETE_STAFF", "FuncionarioComercio", employee.getId(),
                 employee.getName() + " " + employee.getSurname(), "Excluiu permanentemente o operador"));
@@ -124,6 +131,32 @@ public class ServicoFuncionario {
             throw new ExcecaoApi(HttpStatus.FORBIDDEN, "Apenas o gestor pode gerenciar operadores");
         return merchants.findById(current.getId())
                 .orElseThrow(() -> new ExcecaoApi(HttpStatus.NOT_FOUND, "Dono não encontrado"));
+    }
+
+    private Comerciante ownerParaAlteracao(Usuario current) {
+        if (current.getPerfilAcesso() != PerfilAcesso.MERCHANT_OWNER) {
+            throw new ExcecaoApi(HttpStatus.FORBIDDEN,
+                    "Apenas o gestor pode gerenciar operadores");
+        }
+        return merchants.findByIdForUpdate(current.getId())
+                .orElseThrow(() -> new ExcecaoApi(
+                        HttpStatus.NOT_FOUND,
+                        "Gestor não encontrado"));
+    }
+
+    private void exigirVagaDisponivel(Comerciante owner) {
+        int limite = assinaturas.obterLimiteOperadores(owner);
+        long ativos = staffRepository.countByResponsavelIdAndEnabledTrue(
+                owner.getId());
+        if (ativos >= limite) {
+            throw new ExcecaoApi(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "Seu plano permite até " + limite
+                            + (limite == 1
+                                    ? " operador ativo"
+                                    : " operadores ativos")
+                            + ". Bloqueie um operador para liberar uma vaga");
+        }
     }
 
     private FuncionarioComercio findOwned(Comerciante owner, UUID id) {

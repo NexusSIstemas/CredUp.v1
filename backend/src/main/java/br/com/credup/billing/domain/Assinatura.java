@@ -13,9 +13,13 @@ public class Assinatura extends EntidadeBase {
     @JoinColumn(name = "comerciante_id", nullable = false, unique = true)
     private Comerciante comerciante;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "plano", nullable = false, length = 30)
-    private PlanoAssinatura plano;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "plano_id", nullable = false)
+    private PlanoComercial plano;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "proximo_plano_id")
+    private PlanoComercial proximoPlano;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 40)
@@ -59,13 +63,16 @@ public class Assinatura extends EntidadeBase {
         this.comerciante = comerciante;
     }
 
-    public PlanoAssinatura getPlano() {
+    public PlanoComercial getPlano() {
         return plano;
     }
 
-    public void setPlano(PlanoAssinatura plano) {
+    public void setPlano(PlanoComercial plano) {
         this.plano = plano;
     }
+
+    public PlanoComercial getProximoPlano() { return proximoPlano; }
+    public void setProximoPlano(PlanoComercial proximoPlano) { this.proximoPlano = proximoPlano; }
 
     public StatusAssinatura getStatus() {
         return status;

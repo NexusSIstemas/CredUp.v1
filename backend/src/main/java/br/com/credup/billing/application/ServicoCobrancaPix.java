@@ -30,7 +30,6 @@ public class ServicoCobrancaPix {
     private static final String CAMINHO_ORDENS = "/v1/orders";
 
     private final ServicoAssinatura assinaturas;
-    private final ServicoConfiguracaoSistema configuracoes;
     private final RestClient http;
     private final String accessToken;
     private final int expiracaoSegundos;
@@ -40,7 +39,6 @@ public class ServicoCobrancaPix {
 
     public ServicoCobrancaPix(
             ServicoAssinatura assinaturas,
-            ServicoConfiguracaoSistema configuracoes,
             RestClient.Builder construtorHttp,
             @Value("${app.pix.mercado-pago.ambiente}") String ambiente,
             @Value("${app.pix.mercado-pago.access-token}") String accessToken,
@@ -48,7 +46,6 @@ public class ServicoCobrancaPix {
             @Value("${app.pix.mercado-pago.api-url}") String apiUrl,
             @Value("${app.pix.mercado-pago.webhook-secret}") String webhookSecret) {
         this.assinaturas = assinaturas;
-        this.configuracoes = configuracoes;
         this.http = construtorHttp.build();
         this.accessToken = accessToken;
         this.expiracaoSegundos = expiracaoSegundos;
@@ -60,9 +57,9 @@ public class ServicoCobrancaPix {
 
     public RespostaCobrancaPix gerar(Usuario usuario) {
         validarConfiguracao();
-        BigDecimal valorMensal = configuracoes.obter().getValorMensal();
+        BigDecimal valorMensal = assinaturas.obterValorPlano(usuario);
         String referenciaExterna = "CREDUP-" + UUID.randomUUID();
-        JsonNode resposta = criarOrdem(usuario, referenciaExterna);
+        JsonNode resposta = criarOrdem(usuario, referenciaExterna, valorMensal);
         String idOrdem = textoObrigatorio(resposta, "id", "identificador da cobrança");
         JsonNode pagamento = primeiroPagamento(resposta);
         JsonNode meioPagamento = pagamento.path("payment_method");
@@ -77,7 +74,7 @@ public class ServicoCobrancaPix {
             qrCodeBase64 = "data:image/png;base64," + qrCodeBase64;
         }
 
-        validarOrdem(resposta, referenciaExterna);
+        validarOrdem(resposta, referenciaExterna, valorMensal);
         assinaturas.registrarCobrancaPix(usuario, idOrdem, valorMensal);
 
         return new RespostaCobrancaPix(
@@ -166,11 +163,14 @@ public class ServicoCobrancaPix {
         }
     }
 
-    private JsonNode criarOrdem(Usuario usuario, String referenciaExterna) {
+    private JsonNode criarOrdem(
+            Usuario usuario,
+            String referenciaExterna,
+            BigDecimal valorMensal) {
         Map<String, Object> corpo = Map.of(
                 "type", "online",
                 "external_reference", referenciaExterna,
-                "total_amount", valorMensal().toPlainString(),
+                "total_amount", valorMensal.toPlainString(),
                 "payer", Map.of(
                         "email", ambienteTeste
                                 ? "test_user_br@testuser.com"
@@ -178,7 +178,7 @@ public class ServicoCobrancaPix {
                         "first_name", ambienteTeste ? "APRO" : usuario.getName()),
                 "transactions", Map.of(
                         "payments", new Object[]{Map.of(
-                                "amount", valorMensal().toPlainString(),
+                                "amount", valorMensal.toPlainString(),
                                 "payment_method", Map.of(
                                         "id", "pix",
                                         "type", "bank_transfer"))}));
@@ -267,13 +267,16 @@ public class ServicoCobrancaPix {
         return resposta;
     }
 
-    private void validarOrdem(JsonNode ordem, String referenciaEsperada) {
+    private void validarOrdem(
+            JsonNode ordem,
+            String referenciaEsperada,
+            BigDecimal valorEsperado) {
         if (!referenciaEsperada.equals(ordem.path("external_reference").asText())) {
             throw new ExcecaoApi(
                     HttpStatus.BAD_GATEWAY,
                     "A cobrança retornada pelo Mercado Pago não corresponde à solicitação");
         }
-        validarValor(ordem.path("total_amount"), valorMensal());
+        validarValor(ordem.path("total_amount"), valorEsperado);
         JsonNode pagamento = primeiroPagamento(ordem);
         if (!"pix".equalsIgnoreCase(pagamento.path("payment_method").path("id").asText())) {
             throw new ExcecaoApi(
@@ -344,10 +347,6 @@ public class ServicoCobrancaPix {
                     HttpStatus.SERVICE_UNAVAILABLE,
                     "Configure um Access Token de teste do Mercado Pago");
         }
-    }
-
-    private BigDecimal valorMensal() {
-        return configuracoes.obter().getValorMensal();
     }
 
     private void validarIdOrdem(String idOrdem) {
