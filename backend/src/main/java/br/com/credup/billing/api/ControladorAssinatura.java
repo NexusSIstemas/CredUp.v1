@@ -2,6 +2,7 @@ package br.com.credup.billing.api;
 
 import br.com.credup.billing.api.DtosAssinatura.RespostaAssinatura;
 import br.com.credup.billing.api.DtosAssinatura.RespostaPagamentoAssinatura;
+import br.com.credup.billing.api.DtosAssinatura.RespostaPlano;
 import br.com.credup.billing.application.ServicoAssinatura;
 import br.com.credup.identity.domain.Usuario;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -41,6 +42,19 @@ public class ControladorAssinatura {
     @PreAuthorize("hasRole('MERCHANT_OWNER')")
     RespostaAssinatura minha(@AuthenticationPrincipal Usuario usuario) {
         return servico.minha(usuario);
+    }
+
+    @GetMapping("/planos")
+    List<RespostaPlano> planos() {
+        return servico.listarPlanos();
+    }
+
+    @PatchMapping("/minha/plano/{codigo}")
+    @PreAuthorize("hasRole('MERCHANT_OWNER')")
+    RespostaAssinatura escolherPlano(
+            @AuthenticationPrincipal Usuario usuario,
+            @PathVariable String codigo) {
+        return servico.escolherPlano(usuario, codigo);
     }
 
     @GetMapping("/minha/historico")

@@ -14,7 +14,8 @@ public final class DtosAssinatura {
             UUID idComerciante,
             String nomeComerciante,
             String emailMascarado,
-            PlanoAssinatura plano,
+            RespostaPlano plano,
+            RespostaPlano proximoPlano,
             StatusAssinatura status,
             LocalDate inicioAssinatura,
             LocalDate proximaCobranca,
@@ -34,5 +35,17 @@ public final class DtosAssinatura {
             BigDecimal valor,
             Instant pagoEm,
             LocalDate acessoValidoAte) {
+    }
+
+    public record RespostaPlano(
+            String codigo,
+            String nome,
+            BigDecimal valorMensal,
+            int limiteOperadores,
+            int mesesHistorico,
+            boolean relatoriosCompletos,
+            boolean centralCobranca,
+            boolean indicadoresAvancados,
+            boolean importacaoExportacao) {
     }
 }

@@ -86,14 +86,8 @@ class ServicoCobrancaPixTest {
     private ServicoCobrancaPix criarServico(
             ServicoAssinatura assinaturas,
             RestClient.Builder construtor) {
-        var configuracao = mock(br.com.credup.billing.domain.ConfiguracaoSistema.class);
-        when(configuracao.getValorMensal())
-                .thenReturn(new java.math.BigDecimal("39.90"));
-        var configuracoes = mock(ServicoConfiguracaoSistema.class);
-        when(configuracoes.obter()).thenReturn(configuracao);
         return new ServicoCobrancaPix(
                 assinaturas,
-                configuracoes,
                 construtor,
                 "sandbox",
                 "APP_USR-token-teste",

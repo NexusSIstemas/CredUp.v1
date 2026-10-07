@@ -4,9 +4,11 @@ import br.com.credup.audit.domain.RegistroAuditoria;
 import br.com.credup.audit.repository.RepositorioRegistroAuditoria;
 import br.com.credup.billing.api.DtosAssinatura.RespostaAssinatura;
 import br.com.credup.billing.api.DtosAssinatura.RespostaPagamentoAssinatura;
+import br.com.credup.billing.api.DtosAssinatura.RespostaPlano;
 import br.com.credup.billing.domain.*;
 import br.com.credup.billing.repository.RepositorioAssinatura;
 import br.com.credup.billing.repository.RepositorioPagamentoAssinatura;
+import br.com.credup.billing.repository.RepositorioPlanoComercial;
 import br.com.credup.identity.domain.*;
 import br.com.credup.shared.domain.PerfilAcesso;
 import br.com.credup.shared.exception.ExcecaoApi;
@@ -22,16 +24,19 @@ import java.util.*;
 public class ServicoAssinatura {
     private final RepositorioAssinatura assinaturas;
     private final RepositorioPagamentoAssinatura pagamentos;
+    private final RepositorioPlanoComercial planos;
     private final RepositorioRegistroAuditoria auditoria;
     private final ServicoConfiguracaoSistema configuracoes;
 
     public ServicoAssinatura(
             RepositorioAssinatura assinaturas,
             RepositorioPagamentoAssinatura pagamentos,
+            RepositorioPlanoComercial planos,
             RepositorioRegistroAuditoria auditoria,
             ServicoConfiguracaoSistema configuracoes) {
         this.assinaturas = assinaturas;
         this.pagamentos = pagamentos;
+        this.planos = planos;
         this.auditoria = auditoria;
         this.configuracoes = configuracoes;
     }
@@ -43,7 +48,7 @@ public class ServicoAssinatura {
         }
         var assinatura = new Assinatura();
         assinatura.setComerciante(comerciante);
-        assinatura.setPlano(PlanoAssinatura.PROFISSIONAL);
+        assinatura.setPlano(planoEssencial());
         assinatura.setStatus(StatusAssinatura.AGUARDANDO_APROVACAO);
         assinaturas.save(assinatura);
     }
@@ -54,7 +59,6 @@ public class ServicoAssinatura {
         if (assinatura.getStatus() != StatusAssinatura.AGUARDANDO_APROVACAO) {
             return;
         }
-        assinatura.setPlano(PlanoAssinatura.PROFISSIONAL);
         assinatura.setStatus(StatusAssinatura.AGUARDANDO_PAGAMENTO);
     }
 
@@ -74,10 +78,71 @@ public class ServicoAssinatura {
     }
 
     @Transactional(readOnly = true)
+    public List<RespostaPlano> listarPlanos() {
+        return planos.findByAtivoTrueOrderByOrdemExibicaoAsc().stream()
+                .map(this::mapearPlano)
+                .toList();
+    }
+
+    @Transactional
+    public RespostaAssinatura escolherPlano(Usuario usuario, String codigo) {
+        var assinatura = obterDoUsuario(usuario);
+        atualizarStatus(assinatura);
+        var plano = planos.findByCodigoAndAtivoTrue(codigo.toUpperCase(Locale.ROOT))
+                .orElseThrow(() -> new ExcecaoApi(
+                        HttpStatus.NOT_FOUND,
+                        "Plano não encontrado"));
+        invalidarCobrancaPendente(assinatura);
+        if (temAcessoOperacional(assinatura)) {
+            assinatura.setProximoPlano(plano);
+        } else {
+            assinatura.setPlano(plano);
+            assinatura.setProximoPlano(null);
+        }
+        auditoria.save(RegistroAuditoria.of(
+                usuario,
+                "ALTERAR_PLANO_ASSINATURA",
+                "Assinatura",
+                assinatura.getId(),
+                nomeComerciante(assinatura),
+                "Selecionou o plano " + plano.getNome()));
+        return mapear(assinatura);
+    }
+
+    private void invalidarCobrancaPendente(Assinatura assinatura) {
+        if (assinatura.getPixPagoEm() != null
+                || !"ATIVA".equalsIgnoreCase(assinatura.getPixStatus())) {
+            return;
+        }
+        assinatura.setPixTxid(null);
+        assinatura.setPixStatus("CANCELADA_POR_TROCA_DE_PLANO");
+        assinatura.setPixValor(null);
+        assinatura.setPixCriadoEm(null);
+        assinatura.setSolicitacaoAtivacaoEm(null);
+    }
+
+    @Transactional(readOnly = true)
+    public BigDecimal obterValorPlano(Usuario usuario) {
+        var assinatura = obterDoUsuario(usuario);
+        var planoCobranca = assinatura.getProximoPlano() == null
+                ? assinatura.getPlano()
+                : assinatura.getProximoPlano();
+        return planoCobranca.getValorMensal();
+    }
+
+    @Transactional(readOnly = true)
+    public int obterLimiteOperadores(Usuario usuario) {
+        return obterDoUsuario(usuario).getPlano().getLimiteOperadores();
+    }
+
+    @Transactional(readOnly = true)
     public List<RespostaPagamentoAssinatura> listarMeuHistorico(Usuario usuario) {
         var assinatura = obterDoUsuario(usuario);
-        return pagamentos.findByAssinaturaIdOrderByPagoEmDesc(assinatura.getId())
-                .stream()
+        var registros = pagamentos.findByAssinaturaIdOrderByPagoEmDesc(assinatura.getId());
+        int meses = assinatura.getPlano().getMesesHistorico();
+        var limite = meses == 0 ? null : Instant.now().minus(Duration.ofDays(meses * 31L));
+        return registros.stream()
+                .filter(pagamento -> limite == null || !pagamento.getPagoEm().isBefore(limite))
                 .map(this::mapearPagamento)
                 .toList();
     }
@@ -117,7 +182,10 @@ public class ServicoAssinatura {
                 "Assinatura",
                 assinatura.getId(),
                 nomeComerciante(assinatura),
-                "Gerou cobrança Pix para o plano profissional"));
+                "Gerou cobrança Pix para o plano "
+                        + (assinatura.getProximoPlano() == null
+                                ? assinatura.getPlano().getNome()
+                                : assinatura.getProximoPlano().getNome())));
         return assinatura;
     }
 
@@ -158,7 +226,10 @@ public class ServicoAssinatura {
 
         var hoje = LocalDate.now();
         var confirmadoEm = Instant.now();
-        assinatura.setPlano(PlanoAssinatura.PROFISSIONAL);
+        if (assinatura.getProximoPlano() != null) {
+            assinatura.setPlano(assinatura.getProximoPlano());
+            assinatura.setProximoPlano(null);
+        }
         assinatura.setStatus(StatusAssinatura.ATIVA);
         if (assinatura.getInicioAssinatura() == null) {
             assinatura.setInicioAssinatura(hoje);
@@ -273,6 +344,11 @@ public class ServicoAssinatura {
                     HttpStatus.FORBIDDEN,
                     "Relatórios em PDF estão disponíveis somente no plano pago");
         }
+        if (!assinatura.getPlano().isRelatoriosCompletos()) {
+            throw new ExcecaoApi(
+                    HttpStatus.FORBIDDEN,
+                    "Relatórios completos estão disponíveis nos planos Gestão e Rede");
+        }
     }
 
     @Scheduled(cron = "0 0 * * * *", zone = "America/Sao_Paulo")
@@ -298,7 +374,7 @@ public class ServicoAssinatura {
                 .orElseGet(() -> {
                     var assinatura = new Assinatura();
                     assinatura.setComerciante(comerciante);
-                    assinatura.setPlano(PlanoAssinatura.PROFISSIONAL);
+                    assinatura.setPlano(planoEssencial());
                     assinatura.setStatus(StatusAssinatura.AGUARDANDO_APROVACAO);
                     return assinaturas.save(assinatura);
                 });
@@ -344,7 +420,10 @@ public class ServicoAssinatura {
                 assinatura.getComerciante().getId(),
                 nomeComerciante(assinatura),
                 mascararEmail(assinatura.getComerciante().getEmail()),
-                assinatura.getPlano(),
+                mapearPlano(assinatura.getPlano()),
+                assinatura.getProximoPlano() == null
+                        ? null
+                        : mapearPlano(assinatura.getProximoPlano()),
                 assinatura.getStatus(),
                 assinatura.getInicioAssinatura(),
                 assinatura.getProximaCobranca(),
@@ -354,7 +433,7 @@ public class ServicoAssinatura {
                 assinatura.getCreatedAt(),
                 assinatura.getUpdatedAt(),
                 temAcessoOperacional(assinatura),
-                ativa);
+                ativa && assinatura.getPlano().isRelatoriosCompletos());
     }
 
     private String nomeComerciante(Assinatura assinatura) {
@@ -373,6 +452,26 @@ public class ServicoAssinatura {
                 pagamento.getValor(),
                 pagamento.getPagoEm(),
                 pagamento.getAcessoValidoAte());
+    }
+
+    private PlanoComercial planoEssencial() {
+        return planos.findByCodigoAndAtivoTrue("ESSENCIAL")
+                .orElseThrow(() -> new ExcecaoApi(
+                        HttpStatus.SERVICE_UNAVAILABLE,
+                        "Plano Essencial indisponível"));
+    }
+
+    private RespostaPlano mapearPlano(PlanoComercial plano) {
+        return new RespostaPlano(
+                plano.getCodigo(),
+                plano.getNome(),
+                plano.getValorMensal(),
+                plano.getLimiteOperadores(),
+                plano.getMesesHistorico(),
+                plano.isRelatoriosCompletos(),
+                plano.isCentralCobranca(),
+                plano.isIndicadoresAvancados(),
+                plano.isImportacaoExportacao());
     }
 
     private String mascararEmail(String email) {

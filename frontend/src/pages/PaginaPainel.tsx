@@ -6,7 +6,7 @@ import {
   type TomAlerta
 } from '../services/alertas'
 import { CampoFlutuante } from '../components/CampoFlutuante'
-import type { Assinatura, CobrancaPix, StatusCobrancaPix, Comercio, ConfiguracaoPublica, Divida, Funcionario, PagamentoAssinatura, Pagina, SolicitacaoRedefinicaoSenha, Perfil, RegistroAuditoria, Sessao, StatusComercio } from '../types'
+import type { Assinatura, CobrancaPix, StatusCobrancaPix, Comercio, ConfiguracaoPublica, Divida, Funcionario, PagamentoAssinatura, Pagina, PlanoComercial, SolicitacaoRedefinicaoSenha, Perfil, RegistroAuditoria, Sessao, StatusComercio } from '../types'
 import {
   CLASSES_STATUS_COMERCIO,
   CLASSES_STATUS_DIVIDA,
@@ -64,6 +64,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   const [pixCharge, setCobrancaPix] = useState<CobrancaPix | null>(null)
   const [pixLoading, setPixCarregando] = useState(false)
   const [systemConfig, setConfiguracaoSistema] = useState<ConfiguracaoPublica | null>(null)
+  const [plans, setPlanos] = useState<PlanoComercial[]>([])
   const admin = sessao.perfilAcesso === 'ADMIN_REDE'
   const owner = sessao.perfilAcesso === 'MERCHANT_OWNER'
   const staff = sessao.perfilAcesso === 'MERCHANT_STAFF'
@@ -110,9 +111,13 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   const loadSystemConfig = () => api<ConfiguracaoPublica>('/configuracoes/publicas')
     .then(setConfiguracaoSistema)
     .catch(showError)
+  const loadPlans = () => api<PlanoComercial[]>('/assinaturas/planos')
+    .then(setPlanos)
+    .catch(showError)
 
   useEffect(() => {
     loadSystemConfig()
+    loadPlans()
     loadComercios()
     if (admin) {
       loadResets()
@@ -216,14 +221,6 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
     } finally {
       setPixCarregando(false)
     }
-  }
-
-  async function cancelSubscription(id: string) {
-    try {
-      await api(`/assinaturas/${id}/cancelar`, { method: 'PATCH' })
-      showAlert('Assinatura cancelada.', 'sucesso')
-      loadSubscriptions()
-    } catch (erro) { showError(erro) }
   }
 
   async function createComercio(event: FormEvent<HTMLFormElement>) {
@@ -370,6 +367,18 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
       onSessaoChange({ ...sessao, nome: updated.nome })
       showAlert('Informações do perfil atualizadas.', 'sucesso')
     } catch (erro) { showError(erro) }
+  }
+
+  async function choosePlan(codigo: string) {
+    try {
+      const updated = await api<Assinatura>(`/assinaturas/minha/plano/${codigo}`, {
+        method: 'PATCH'
+      })
+      setAssinatura(updated)
+      showAlert(`Plano ${updated.plano.nome} selecionado.`, 'sucesso')
+    } catch (erro) {
+      showError(erro)
+    }
   }
 
   async function configurarPin(event: FormEvent<HTMLFormElement>) {
@@ -632,6 +641,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
         assinaturasFiltradas={filteredSubscriptions}
         historico={subscriptionHistory}
         configuracao={systemConfig}
+        planos={plans}
         busca={subscriptionQuery}
         situacao={subscriptionStatus}
         cobrancaPix={pixCharge}
@@ -639,7 +649,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
         alterarBusca={setBuscaAssinatura}
         alterarSituacao={setStatusAssinatura}
         gerarCobrancaPix={generatePixCharge}
-        cancelarAssinatura={cancelSubscription}
+        escolherPlano={choosePlan}
         copiarPix={codigo => {
           void navigator.clipboard.writeText(codigo)
           showAlert('Pix Copia e Cola copiado.', 'sucesso')
@@ -648,6 +658,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
 
       {section === 'staff' && owner && <SecaoFuncionarios
         funcionarios={employees}
+        limiteOperadores={subscription?.plano.limiteOperadores ?? 3}
         senhaTemporaria={staffPassword}
         dadosVisiveis={privacyVisible}
         criar={createStaff}

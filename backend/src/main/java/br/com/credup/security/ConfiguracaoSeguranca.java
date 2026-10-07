@@ -37,6 +37,7 @@ public class ConfiguracaoSeguranca {
                                 "/api/auth/refresh", "/api/auth/logout",
                                 "/api/webhooks/mercado-pago",
                                 "/api/configuracoes/publicas",
+                                "/api/assinaturas/planos",
                                 "/actuator/health").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwt, UsernamePasswordAuthenticationFilter.class)
