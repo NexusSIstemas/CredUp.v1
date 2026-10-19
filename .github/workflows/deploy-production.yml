@@ -20,7 +20,7 @@ jobs:
     environment: production
     timeout-minutes: 20
     env:
-      HOST: 70.38.101.135
+      HOST: 184.107.88.8
       PORTA: "22"
       USUARIO: root
       DIRETORIO: /opt/credup
@@ -43,7 +43,7 @@ jobs:
           chmod 600 "$HOME/.ssh/credup_deploy"
           ssh-keygen -y -f "$HOME/.ssh/credup_deploy" >/dev/null
           printf '%s\n' \
-            '70.38.101.135 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIO1dPDEoCC3GuCuNta9PWpGNxoUTXIvxsma/fpGQFJx' \
+            '184.107.88.8 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIO1dPDEoCC3GuCuNta9PWpGNxoUTXIvxsma/fpGQFJx' \
             > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/known_hosts"
 
