@@ -43,7 +43,7 @@ jobs:
           chmod 600 "$HOME/.ssh/credup_deploy"
           ssh-keygen -y -f "$HOME/.ssh/credup_deploy" >/dev/null
           printf '%s\n' \
-            '184.107.88.8 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIO1dPDEoCC3GuCuNta9PWpGNxoUTXIvxsma/fpGQFJx' \
+            '184.107.88.8 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINm02dQEtnyaqJvYFvz9W3yBZih41EIbTZ8R' \
             > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/known_hosts"
 
