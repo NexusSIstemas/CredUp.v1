@@ -125,7 +125,7 @@ jobs:
               --silent \
               --show-error \
               --max-time 10 \
-              "https://nexus.vps10413.panel.icontainer.cloud/health"
+              "https://credup.vps12252.panel.icontainer.website/health"
             then
               echo "CredUp publicado com sucesso."
               exit 0
