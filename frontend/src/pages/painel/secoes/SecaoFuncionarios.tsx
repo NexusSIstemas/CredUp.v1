@@ -36,9 +36,9 @@ export function SecaoFuncionarios({
       <section className="painel-conteudo">
         <div className="cabecalho-painel-conteudo"><div><h2>Equipe cadastrada</h2><p>{operadoresAtivos} de {limiteOperadores} operador(es) ativo(s) no seu plano.</p></div></div>
         <div className="lista-funcionarios">{funcionarios.map(funcionario => <article className="cartao-funcionario" key={funcionario.id}>
-          <div className="avatar-funcionario">{funcionario.nome[0]}{funcionario.sobrenome[0]}</div>
-          <div className="informacoes-funcionario"><strong>{funcionario.nome} {funcionario.sobrenome}</strong>
-            <small className={!dadosVisiveis ? 'oculto' : ''}>{dadosVisiveis ? `${funcionario.emailMascarado} · ${funcionario.cpfMascarado} · ${funcionario.telefoneMascarado}` : 'Dados pessoais protegidos'}</small>
+          <div className="avatar-funcionario">{funcionario.nomeCompleto[0]}</div>
+          <div className="informacoes-funcionario"><strong>{funcionario.nomeCompleto}</strong>
+            <small>{funcionario.email} · {dadosVisiveis ? funcionario.cpfMascarado : '***.***.***-**'} · {funcionario.telefone}</small>
             <small>{funcionario.dataNascimento ? `Nascimento: ${new Date(`${funcionario.dataNascimento}T12:00:00`).toLocaleDateString('pt-BR')}` : 'Data de nascimento não informada'}</small></div>
           <span className={`indicador ${funcionario.ativo ? 'aprovado' : 'rejeitado'}`}>{funcionario.ativo ? 'Ativo' : 'Bloqueado'}</span>
           <div className="acoes-funcionario"><button className="pequeno" onClick={() => redefinirSenha(funcionario.id)}>Redefinir senha</button>
@@ -50,7 +50,7 @@ export function SecaoFuncionarios({
       <section className="painel-conteudo painel-fixo"><h2>Novo operador</h2><p className="suave">O operador receberá uma senha temporária e deverá trocá-la no primeiro acesso.</p>
         {limiteAtingido && <div className="aviso-limite-operadores"><strong>Limite de operadores atingido</strong><p>Seu plano inclui {limiteOperadores} operador(es) ativo(s). Bloqueie um acesso existente para liberar uma vaga ou solicite Operadores adicionais por uma pequena taxa mensal.</p></div>}
         {!limiteAtingido && <form className="formulario-compacto" onSubmit={criar}>
-          <div className="grade-formulario"><CampoFlutuante label="Nome"><input name="nome" placeholder=" " required /></CampoFlutuante><CampoFlutuante label="Sobrenome"><input name="sobrenome" placeholder=" " required /></CampoFlutuante></div>
+          <CampoFlutuante label="Nome completo"><input name="nomeCompleto" autoComplete="name" placeholder=" " required /></CampoFlutuante>
           <CampoFlutuante label="CPF: 000.000.000-00"><input name="cpf" inputMode="numeric" maxLength={14} placeholder=" " onInput={evento => { evento.currentTarget.value = mascararCpf(evento.currentTarget.value) }} required /></CampoFlutuante>
           <CampoFlutuante label="Telefone: (11) 99999-9999"><input name="telefone" inputMode="tel" maxLength={15} placeholder=" " onInput={evento => { evento.currentTarget.value = mascararTelefone(evento.currentTarget.value) }} required /></CampoFlutuante>
           <CampoFlutuante label="E-mail: funcionario@mercado.com.br"><input name="email" type="email" placeholder=" " required /></CampoFlutuante>
