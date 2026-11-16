@@ -65,7 +65,7 @@ public class ServicoRelatorioInadimplencia {
 
         Context contexto = new Context(new Locale("pt", "BR"));
         contexto.setVariable("geradoEm", DATA_HORA.format(LocalDateTime.now(ZoneId.of("America/Sao_Paulo"))));
-        contexto.setVariable("geradoPor", usuario.getName() + " " + usuario.getSurname());
+        contexto.setVariable("geradoPor", usuario.getFullname());
         contexto.setVariable("periodo", formatarPeriodo(dataInicio, dataFim));
         contexto.setVariable("statusFiltro", status == null ? "Todos" : rotuloStatus(status));
         contexto.setVariable(
@@ -122,7 +122,7 @@ public class ServicoRelatorioInadimplencia {
     private LinhaRelatorio mapear(Divida divida) {
         var cliente = divida.getClient();
         return new LinhaRelatorio(
-                cliente.getName() + " " + cliente.getSurname(),
+                cliente.getFullname(),
                 mascararCpf(cliente.getCpf()),
                 divida.getComercio().getComercioName(),
                 DATA.format(divida.getDateValue()),

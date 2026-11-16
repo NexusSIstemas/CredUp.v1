@@ -69,6 +69,14 @@ public class ControladorAutenticacao {
         return service.aprovarRedefinicao(id);
     }
 
+    @PostMapping("/users/{idUsuario}/temporary-password")
+    @PreAuthorize("hasRole('ADMIN_REDE')")
+    RespostaSenhaTemporariaAdministrativa gerarSenhaTemporaria(
+            @AuthenticationPrincipal Usuario administrador,
+            @PathVariable UUID idUsuario) {
+        return service.gerarSenhaTemporariaAdministrativa(administrador, idUsuario);
+    }
+
     @PostMapping("/password-resets/{id}/reject")
     @PreAuthorize("hasRole('ADMIN_REDE')")
     ResponseEntity<Void> reject(@PathVariable UUID id) {

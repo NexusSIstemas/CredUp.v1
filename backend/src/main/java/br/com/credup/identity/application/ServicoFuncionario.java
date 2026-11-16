@@ -57,8 +57,7 @@ public class ServicoFuncionario {
                     "O usuário deve ter pelo menos 18 anos");
         String senha = senhaTemporaria();
         var employee = new FuncionarioComercio();
-        employee.setName(request.nome().trim());
-        employee.setSurname(request.sobrenome().trim());
+        employee.setFullname(request.nomeCompleto().trim());
         employee.setTelephone(request.telefone());
         employee.setCpf(request.cpf());
         employee.setEmail(request.email().trim().toLowerCase());
@@ -70,7 +69,7 @@ public class ServicoFuncionario {
         employee.setEnabled(true);
         staffRepository.save(employee);
         auditLogs.save(RegistroAuditoria.of(owner, "CREATE_STAFF", "FuncionarioComercio", employee.getId(),
-                employee.getName() + " " + employee.getSurname(), "Criou o acesso do operador"));
+                employee.getFullname() + " ", "Criou o acesso do operador"));
         return new RespostaFuncionarioCriado(map(employee), senha);
     }
 
@@ -78,7 +77,7 @@ public class ServicoFuncionario {
     public List<RespostaFuncionario> list(Usuario current) {
         assinaturas.exigirAcessoOperacional(current);
         Comerciante owner = owner(current);
-        return staffRepository.findByResponsavelIdOrderByNameAsc(owner.getId()).stream().map(this::map).toList();
+        return staffRepository.findByResponsavelIdOrderByFullnameAsc(owner.getId()).stream().map(this::map).toList();
     }
 
     @Transactional
@@ -91,7 +90,7 @@ public class ServicoFuncionario {
         }
         employee.setEnabled(request.ativo());
         auditLogs.save(RegistroAuditoria.of(owner, request.ativo() ? "ENABLE_STAFF" : "DISABLE_STAFF",
-                "FuncionarioComercio", employee.getId(), employee.getName() + " " + employee.getSurname(),
+                "FuncionarioComercio", employee.getId(), employee.getFullname() + " ",
                 request.ativo() ? "Reativou o acesso do operador" : "Bloqueou o acesso do operador"));
         return map(employee);
     }
@@ -111,7 +110,7 @@ public class ServicoFuncionario {
         employee.invalidarSessoes();
         sessoesAtualizacao.revogarTodas(employee);
         auditLogs.save(RegistroAuditoria.of(owner, "RESET_STAFF_PASSWORD", "FuncionarioComercio", employee.getId(),
-                employee.getName() + " " + employee.getSurname(),
+                employee.getFullname() + " ",
                 "Gerou uma nova senha temporária para o operador"));
         return new RespostaSenhaFuncionario(senha);
     }
@@ -122,7 +121,7 @@ public class ServicoFuncionario {
         Comerciante owner = ownerParaAlteracao(current);
         var employee = findOwned(owner, id);
         auditLogs.save(RegistroAuditoria.of(owner, "DELETE_STAFF", "FuncionarioComercio", employee.getId(),
-                employee.getName() + " " + employee.getSurname(), "Excluiu permanentemente o operador"));
+                employee.getFullname() + " ", "Excluiu permanentemente o operador"));
         staffRepository.delete(employee);
     }
 
@@ -166,19 +165,10 @@ public class ServicoFuncionario {
 
     private RespostaFuncionario map(FuncionarioComercio employee) {
         String cpf = employee.getCpf();
-        String phone = employee.getTelephone();
-        return new RespostaFuncionario(employee.getId(), employee.getName(), employee.getSurname(),
-                mascararEmail(employee.getEmail()), cpf.substring(0, 3) + ".***.***-" + cpf.substring(9),
-                "(" + phone.substring(0, 2) + ") *****-" + phone.substring(phone.length() - 4),
+        return new RespostaFuncionario(employee.getId(), employee.getFullname(),
+                employee.getEmail(), cpf.substring(0, 3) + ".***.***-" + cpf.substring(9),
+                employee.getTelephone(),
                 employee.getDateBirth(), employee.isEnabled());
-    }
-
-    private String mascararEmail(String email) {
-        int separador = email.indexOf('@');
-        if (separador <= 0)
-            return "***";
-        String usuario = email.substring(0, separador);
-        return usuario.substring(0, Math.min(2, usuario.length())) + "***" + email.substring(separador);
     }
 
     private String senhaTemporaria() {

@@ -29,7 +29,7 @@ public class ServicoAuditoria {
         var usuario = registro.getUsuario();
         String nomeAutor = registro.getAutorNome() != null
                 ? registro.getAutorNome()
-                : usuario.getName() + " " + usuario.getSurname();
+                : usuario.getFullname() + " ";
         PerfilAcesso perfilAutor = registro.getAutorPerfil() != null
                 ? PerfilAcesso.valueOf(registro.getAutorPerfil())
                 : usuario.getPerfilAcesso();

@@ -11,8 +11,7 @@ import java.util.UUID;
 @Table(name = "usuarios")
 @Inheritance(strategy = InheritanceType.JOINED)
 public class Usuario extends EntidadeBase {
-    @Column(name = "nome", nullable = false) private String name;
-    @Column(name = "sobrenome", nullable = false) private String surname;
+    @Column(name = "nome_completo", nullable = false) private String fullname;
     @Column(name = "telefone") private String telephone;
     @Column(nullable = false, unique = true, length = 11) private String cpf;
     @Column(nullable = false, unique = true) private String email;
@@ -31,20 +30,12 @@ public class Usuario extends EntidadeBase {
         if (dateRegister == null) dateRegister = Instant.now();
     }
 
-    public String getName() {
-        return name;
+    public String getFullname() {
+        return fullname;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getSurname() {
-        return surname;
-    }
-
-    public void setSurname(String surname) {
-        this.surname = surname;
+    public void setFullname(String name) {
+        this.fullname = name;
     }
 
     public String getTelephone() {

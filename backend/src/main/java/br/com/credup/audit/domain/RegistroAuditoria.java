@@ -31,7 +31,7 @@ public class RegistroAuditoria extends EntidadeBase {
         log.action = action;
         log.targetEntity = targetEntity;
         log.targetId = targetId;
-        log.authorName = user.getName() + " " + user.getSurname();
+        log.authorName = user.getFullname();
         log.authorRole = user.getPerfilAcesso().name();
         log.targetDescription = targetDescription;
         log.details = details;

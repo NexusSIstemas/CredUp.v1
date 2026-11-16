@@ -32,7 +32,7 @@ public class ServicoPerfil {
             throw new ExcecaoApi(HttpStatus.UNAUTHORIZED, "Senha atual inválida");
         user.setPinRecuperacaoHash(codificador.encode(request.pin()));
         auditLogs.save(RegistroAuditoria.of(user, "UPDATE_RECOVERY_PIN", "Usuario", user.getId(),
-                user.getName() + " " + user.getSurname(), "Configurou um novo PIN de recuperação"));
+                user.getFullname() + " ", "Configurou um novo PIN de recuperação"));
         return map(user);
     }
 
@@ -40,7 +40,7 @@ public class ServicoPerfil {
     public RespostaPerfil get(Usuario current) {
         var user = findCurrent(current);
         auditLogs.save(RegistroAuditoria.of(user, "VIEW_OWN_PROFILE", "Usuario", user.getId(),
-                user.getName() + " " + user.getSurname(), "Visualizou as informações do próprio perfil"));
+                user.getFullname() + " ", "Visualizou as informações do próprio perfil"));
         return map(user);
     }
 
@@ -55,13 +55,12 @@ public class ServicoPerfil {
             });
             user.setEmail(request.email().trim().toLowerCase());
         }
-        user.setName(request.nome().trim());
-        user.setSurname(request.sobrenome().trim());
+        user.setFullname(request.nomeCompleto().trim());
         if (request.telefone() != null && !request.telefone().isBlank())
             user.setTelephone(request.telefone());
         user.setDateBirth(request.dataNascimento());
         auditLogs.save(RegistroAuditoria.of(user, "UPDATE_OWN_PROFILE", "Usuario", user.getId(),
-                user.getName() + " " + user.getSurname(), "Atualizou as informações do próprio perfil"));
+                user.getFullname() + " ", "Atualizou as informações do próprio perfil"));
         return map(user);
     }
 
@@ -71,9 +70,9 @@ public class ServicoPerfil {
     }
 
     private RespostaPerfil map(Usuario user) {
-        return new RespostaPerfil(user.getId(), user.getName(), user.getSurname(),
-                mascararTelefone(user.getTelephone()), mascararCpf(user.getCpf()),
-                mascararEmail(user.getEmail()), user.getDateBirth(), user.getPerfilAcesso(),
+        return new RespostaPerfil(user.getId(), user.getFullname(),
+                user.getTelephone(), mascararCpf(user.getCpf()),
+                user.getEmail(), user.getDateBirth(), user.getPerfilAcesso(),
                 user.possuiPinRecuperacao());
     }
 
@@ -87,19 +86,4 @@ public class ServicoPerfil {
         return cpf.substring(0, 3) + ".***.***-" + cpf.substring(9);
     }
 
-    private String mascararTelefone(String telefone) {
-        if (telefone == null || telefone.length() < 10)
-            return null;
-        return telefone.length() == 11
-                ? "(" + telefone.substring(0, 2) + ") *****-" + telefone.substring(7)
-                : "(" + telefone.substring(0, 2) + ") ****-" + telefone.substring(6);
-    }
-
-    private String mascararEmail(String email) {
-        int separador = email.indexOf('@');
-        if (separador <= 0)
-            return "***";
-        String usuario = email.substring(0, separador);
-        return usuario.substring(0, Math.min(2, usuario.length())) + "***" + email.substring(separador);
-    }
 }

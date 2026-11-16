@@ -11,11 +11,10 @@ public final class DtosPerfil {
 
     public record RespostaPerfil(
             UUID id,
-            String nome,
-            String sobrenome,
-            String telefoneMascarado,
+            String nomeCompleto,
+            String telefone,
             String cpfMascarado,
-            String emailMascarado,
+            String email,
             LocalDate dataNascimento,
             PerfilAcesso perfilAcesso,
             boolean pinRecuperacaoConfigurado) {
@@ -28,8 +27,7 @@ public final class DtosPerfil {
     }
 
     public record SolicitacaoAtualizacaoPerfil(
-            @NotBlank String nome,
-            @NotBlank String sobrenome,
+            @NotBlank String nomeCompleto,
             @Pattern(regexp = "^$|\\d{10,11}", message = "Telefone inválido") String telefone,
             @Email(message = "E-mail inválido") String email,
             @Past(message = "Data de nascimento inválida")

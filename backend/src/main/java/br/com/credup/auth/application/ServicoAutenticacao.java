@@ -1,6 +1,8 @@
 package br.com.credup.auth.application;
 
 import br.com.credup.auth.api.DtosAutenticacao.*;
+import br.com.credup.audit.domain.RegistroAuditoria;
+import br.com.credup.audit.repository.RepositorioRegistroAuditoria;
 import br.com.credup.identity.domain.Comerciante;
 import br.com.credup.identity.domain.Usuario;
 import br.com.credup.identity.repository.*;
@@ -31,12 +33,14 @@ public class ServicoAutenticacao {
     private final RepositorioSolicitacaoRedefinicaoSenha solicitacoesRedefinicao;
     private final ServicoAssinatura assinaturas;
     private final ServicoSessaoAtualizacao sessoesAtualizacao;
+    private final RepositorioRegistroAuditoria auditoria;
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String TEMP_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
 
     public ServicoAutenticacao(RepositorioUsuario users, RepositorioComerciante merchants, PasswordEncoder codificador, ServicoJwt jwt,
                        RepositorioComercio commerces, RepositorioSolicitacaoRedefinicaoSenha solicitacoesRedefinicao,
-                       ServicoAssinatura assinaturas, ServicoSessaoAtualizacao sessoesAtualizacao) {
+                       ServicoAssinatura assinaturas, ServicoSessaoAtualizacao sessoesAtualizacao,
+                       RepositorioRegistroAuditoria auditoria) {
         this.users = users;
         this.merchants = merchants;
         this.codificador = codificador;
@@ -45,6 +49,7 @@ public class ServicoAutenticacao {
         this.solicitacoesRedefinicao = solicitacoesRedefinicao;
         this.assinaturas = assinaturas;
         this.sessoesAtualizacao = sessoesAtualizacao;
+        this.auditoria = auditoria;
     }
 
     @Transactional
@@ -58,8 +63,7 @@ public class ServicoAutenticacao {
         if (users.existsByCpf(request.cpf()))
             throw new ExcecaoApi(HttpStatus.CONFLICT, "CPF já cadastrado");
         var merchant = new Comerciante();
-        merchant.setName(request.nome());
-        merchant.setSurname(request.sobrenome());
+        merchant.setFullname(request.nomeCompleto());
         merchant.setTelephone(request.telefone());
         merchant.setCpf(request.cpf());
         merchant.setEmail(request.email().toLowerCase());
@@ -84,7 +88,7 @@ public class ServicoAutenticacao {
     }
 
     private RespostaAutenticacao response(br.com.credup.identity.domain.Usuario user) {
-        return new RespostaAutenticacao(jwt.generate(user), user.getId(), user.getName(), user.getPerfilAcesso(),
+        return new RespostaAutenticacao(jwt.generate(user), user.getId(), user.getFullname(), user.getPerfilAcesso(),
                 user.deveAlterarSenha());
     }
 
@@ -122,8 +126,9 @@ public class ServicoAutenticacao {
     public List<RespostaSolicitacaoRedefinicao> redefinicoesPendentes() {
         return solicitacoesRedefinicao.findByStatusOrderBySolicitadoEmAsc(StatusRedefinicaoSenha.PENDING).stream()
                 .map(reset -> new RespostaSolicitacaoRedefinicao(reset.getId(),
-                        reset.getUsuario().getName() + " " + reset.getUsuario().getSurname(),
-                        maskCpf(reset.getUsuario().getCpf()), maskPhone(reset.getUsuario().getTelephone()),
+                        reset.getUsuario().getFullname(),
+                        maskCpf(reset.getUsuario().getCpf()), reset.getUsuario().getTelephone(),
+                        reset.getUsuario().getEmail(),
                         reset.getComercioName(), reset.getSolicitadoEm()))
                 .toList();
     }
@@ -138,7 +143,40 @@ public class ServicoAutenticacao {
         sessoesAtualizacao.revogarTodas(reset.getUsuario());
         reset.setStatus(StatusRedefinicaoSenha.APPROVED);
         reset.setResolvedAt(Instant.now());
-        return new RespostaDecisaoRedefinicao(senhaTemporaria);
+        return new RespostaDecisaoRedefinicao(
+                reset.getUsuario().getEmail(), senhaTemporaria);
+    }
+
+    @Transactional
+    public RespostaSenhaTemporariaAdministrativa gerarSenhaTemporariaAdministrativa(
+            Usuario administrador, UUID idUsuario) {
+        var usuario = users.findById(idUsuario)
+                .orElseThrow(() -> new ExcecaoApi(
+                        HttpStatus.NOT_FOUND, "Usuário não encontrado"));
+        if (usuario.getPerfilAcesso() == PerfilAcesso.ADMIN_REDE) {
+            throw new ExcecaoApi(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "A senha de outro administrador não pode ser redefinida por esta tela");
+        }
+
+        String senhaTemporaria = senhaTemporaria();
+        usuario.setSenha(codificador.encode(senhaTemporaria));
+        usuario.setDeveAlterarSenha(true);
+        usuario.invalidarSessoes();
+        sessoesAtualizacao.revogarTodas(usuario);
+        auditoria.save(RegistroAuditoria.of(
+                administrador,
+                "GERAR_SENHA_TEMPORARIA_ADMINISTRATIVA",
+                "Usuario",
+                usuario.getId(),
+                usuario.getFullname(),
+                "Gerou uma senha temporária de recuperação para o usuário"));
+
+        return new RespostaSenhaTemporariaAdministrativa(
+                usuario.getId(),
+                usuario.getFullname(),
+                usuario.getEmail(),
+                senhaTemporaria);
     }
 
     @Transactional
@@ -178,11 +216,6 @@ public class ServicoAutenticacao {
 
     private String maskCpf(String cpf) {
         return "***." + cpf.substring(3, 6) + "." + cpf.substring(6, 9) + "-**";
-    }
-
-    private String maskPhone(String phone) {
-        if (phone == null || phone.length() < 10) return "***";
-        return "(" + phone.substring(0, 2) + ") *****-" + phone.substring(phone.length() - 4);
     }
 
     public record ResultadoAutenticacao(

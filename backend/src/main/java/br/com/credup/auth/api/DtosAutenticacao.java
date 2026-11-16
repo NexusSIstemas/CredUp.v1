@@ -12,8 +12,7 @@ public final class DtosAutenticacao {
     }
 
     public record SolicitacaoCadastro(
-            @NotBlank String nome,
-            @NotBlank String sobrenome,
+            @NotBlank String nomeCompleto,
             @NotBlank
             @Pattern(regexp = "\\d{10,11}", message = "Telefone inválido")
             String telefone,
@@ -80,12 +79,21 @@ public final class DtosAutenticacao {
             UUID id,
             String nome,
             String cpfMascarado,
-            String telefoneMascarado,
+            String telefone,
+            String email,
             String nomeComercio,
             Instant solicitadoEm) {
     }
 
     public record RespostaDecisaoRedefinicao(
+            String email,
+            String senhaTemporaria) {
+    }
+
+    public record RespostaSenhaTemporariaAdministrativa(
+            UUID idUsuario,
+            String nomeCompleto,
+            String email,
             String senhaTemporaria) {
     }
 }

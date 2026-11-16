@@ -13,7 +13,7 @@ public final class DtosAssinatura {
             UUID id,
             UUID idComerciante,
             String nomeComerciante,
-            String emailMascarado,
+            String email,
             RespostaPlano plano,
             RespostaPlano proximoPlano,
             StatusAssinatura status,
@@ -31,7 +31,7 @@ public final class DtosAssinatura {
     public record RespostaPagamentoAssinatura(
             UUID id,
             String nomeGestor,
-            String emailMascarado,
+            String email,
             BigDecimal valor,
             Instant pagoEm,
             LocalDate acessoValidoAte) {

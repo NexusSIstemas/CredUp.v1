@@ -78,8 +78,7 @@ class ServicoAssinaturaTest {
         var repositorio = mock(RepositorioAssinatura.class);
         var auditoria = mock(RepositorioRegistroAuditoria.class);
         var comerciante = new Comerciante();
-        comerciante.setName("Comerciante");
-        comerciante.setSurname("Teste");
+        comerciante.setFullname("Comerciante");
         comerciante.setEmail("comerciante@teste.com");
         comerciante.setPerfilAcesso(PerfilAcesso.MERCHANT_OWNER);
 

@@ -419,7 +419,7 @@ public class ServicoAssinatura {
                 assinatura.getId(),
                 assinatura.getComerciante().getId(),
                 nomeComerciante(assinatura),
-                mascararEmail(assinatura.getComerciante().getEmail()),
+                assinatura.getComerciante().getEmail(),
                 mapearPlano(assinatura.getPlano()),
                 assinatura.getProximoPlano() == null
                         ? null
@@ -437,9 +437,7 @@ public class ServicoAssinatura {
     }
 
     private String nomeComerciante(Assinatura assinatura) {
-        return assinatura.getComerciante().getName()
-                + " "
-                + assinatura.getComerciante().getSurname();
+        return assinatura.getComerciante().getFullname();
     }
 
     private RespostaPagamentoAssinatura mapearPagamento(
@@ -448,7 +446,7 @@ public class ServicoAssinatura {
         return new RespostaPagamentoAssinatura(
                 pagamento.getId(),
                 nomeComerciante(assinatura),
-                mascararEmail(assinatura.getComerciante().getEmail()),
+                assinatura.getComerciante().getEmail(),
                 pagamento.getValor(),
                 pagamento.getPagoEm(),
                 pagamento.getAcessoValidoAte());
@@ -474,14 +472,4 @@ public class ServicoAssinatura {
                 plano.isImportacaoExportacao());
     }
 
-    private String mascararEmail(String email) {
-        int separador = email.indexOf('@');
-        if (separador <= 0) {
-            return "***";
-        }
-        String usuario = email.substring(0, separador);
-        return usuario.substring(0, Math.min(2, usuario.length()))
-                + "***"
-                + email.substring(separador);
-    }
 }
