@@ -116,8 +116,7 @@ export function PaginaAutenticacao({ onAuth }: { onAuth: (session: Sessao) => vo
             <CampoFlutuante label="Confirmar nova senha"><input name="confirmacaoSenha" type="password" minLength={8} placeholder=" " required /></CampoFlutuante>
           </>}
           {register && <div className="grade-formulario">
-            <CampoFlutuante label="Nome"><input name="nome" placeholder=" " required /></CampoFlutuante>
-            <CampoFlutuante label="Sobrenome"><input name="sobrenome" placeholder=" " required /></CampoFlutuante>
+            <CampoFlutuante label="Nome completo"><input name="nomeCompleto" autoComplete="name" placeholder=" " required /></CampoFlutuante>
             <CampoFlutuante label="Telefone: (11) 99999-9999"><input name="telefone" inputMode="tel" maxLength={15} placeholder=" " onInput={e => { e.currentTarget.value = maskPhone(e.currentTarget.value) }} required /></CampoFlutuante>
             <CampoFlutuante label="CPF: 000.000.000-00"><input name="cpf" inputMode="numeric" maxLength={14} placeholder=" " onInput={e => { e.currentTarget.value = maskCpf(e.currentTarget.value) }} required /></CampoFlutuante>
             <CampoFlutuante label="Data de nascimento (opcional)"><input name="dataNascimento" type="date" max={maximumBirthDate()} placeholder=" "

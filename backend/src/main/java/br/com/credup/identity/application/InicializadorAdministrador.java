@@ -31,8 +31,7 @@ public class InicializadorAdministrador implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         if (users.existsByRole(PerfilAcesso.ADMIN_REDE)) return;
         var admin = new Usuario();
-        admin.setName("Administrador");
-        admin.setSurname("CredUp");
+        admin.setFullname("Administrador CredUp");
         admin.setTelephone("00000000000");
         admin.setCpf("00000000000");
         admin.setEmail(email);

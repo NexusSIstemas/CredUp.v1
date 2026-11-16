@@ -34,7 +34,7 @@ export function BarraLateralPainel({
   alternarPrivacidade,
   sair
 }: PropriedadesNavegacao) {
-  const nome = perfil?.nome ?? sessao.nome
+  const nome = perfil?.nomeCompleto ?? sessao.nome
 
   return <aside>
       <a className="marca" href="#"><span>C</span> CredUp</a>
@@ -60,7 +60,7 @@ export function CabecalhoPainel({
   abrirSecao,
   alternarPrivacidade
 }: PropriedadesNavegacao) {
-  const nome = perfil?.nome ?? sessao.nome
+  const nome = perfil?.nomeCompleto ?? sessao.nome
 
   return <header className="cabecalho-painel">
       <div><p className="sobretitulo">Rede CredUp</p></div>

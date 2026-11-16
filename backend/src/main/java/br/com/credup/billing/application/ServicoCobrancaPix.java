@@ -175,7 +175,7 @@ public class ServicoCobrancaPix {
                         "email", ambienteTeste
                                 ? "test_user_br@testuser.com"
                                 : usuario.getEmail(),
-                        "first_name", ambienteTeste ? "APRO" : usuario.getName()),
+                        "first_name", ambienteTeste ? "APRO" : usuario.getFullname()),
                 "transactions", Map.of(
                         "payments", new Object[]{Map.of(
                                 "amount", valorMensal.toPlainString(),

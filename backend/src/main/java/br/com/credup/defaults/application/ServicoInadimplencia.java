@@ -63,7 +63,7 @@ public class ServicoInadimplencia {
         debt.setInterestRate(request.possuiJuros() ? request.taxaJuros() : null);
         debts.save(debt);
         auditLogs.save(RegistroAuditoria.of(current, "CRIAR_DIVIDA", "Divida", debt.getId(),
-                client.getName() + " " + client.getSurname(),
+                client.getFullname(),
                 "Cadastrou uma dívida no comércio " + commerce.getComercioName()));
         return map(debt, current);
     }
@@ -72,8 +72,7 @@ public class ServicoInadimplencia {
             SolicitacaoCliente request,
             String cpf) {
         var client = new ClienteInadimplente();
-        client.setName(request.nome());
-        client.setSurname(request.sobrenome());
+        client.setFullname(request.nome());
         client.setNickname(normalizeNickname(request.apelido()));
         client.setCpf(cpf);
         client.setTelephone(request.telefone());
@@ -111,17 +110,19 @@ public class ServicoInadimplencia {
         Specification<Divida> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             if (search != null && !search.isBlank()) {
-                var normalizedSearch = search.trim();
-                if (normalizedSearch.matches("[\\d.\\-\\s]+")) {
-                    var cpfDigits = normalizedSearch.replaceAll("\\D", "");
-                    predicates.add(cb.like(
-                            root.get("client").get("cpf"),
-                            cpfDigits + "%"));
-                } else {
-                    predicates.add(cb.like(
-                            cb.lower(root.get("client").get("nickname")),
-                            "%" + normalizedSearch.toLowerCase(Locale.ROOT) + "%"));
+                var normalizedSearch = search.trim().toLowerCase(Locale.ROOT);
+                var textPattern = "%" + normalizedSearch + "%";
+                List<Predicate> criteriosBusca = new ArrayList<>();
+                criteriosBusca.add(cb.like(
+                        cb.lower(root.get("client").get("fullname")), textPattern));
+                criteriosBusca.add(cb.like(
+                        cb.lower(root.get("client").get("nickname")), textPattern));
+                var cpfDigits = normalizedSearch.replaceAll("\\D", "");
+                if (!cpfDigits.isEmpty()) {
+                    criteriosBusca.add(cb.like(
+                            root.get("client").get("cpf"), cpfDigits + "%"));
                 }
+                predicates.add(cb.or(criteriosBusca.toArray(Predicate[]::new)));
             }
             if (commerceId != null) predicates.add(cb.equal(root.get("commerce").get("id"), commerceId));
             if (status != null) predicates.add(cb.equal(root.get("status"), status));
@@ -138,9 +139,9 @@ public class ServicoInadimplencia {
         commerceService.exigirComercioAprovadoParaConsulta(current);
         var c = clients.findById(id).orElseThrow(() -> new ExcecaoApi(HttpStatus.NOT_FOUND, "Cliente não encontrado"));
         auditLogs.save(RegistroAuditoria.of(current, "VIEW_FULL_CPF", "ClienteInadimplente", id,
-                c.getName() + " " + c.getSurname(), "Consultou os dados detalhados do cliente"));
-        return new DetalhesCliente(c.getId(), c.getName(), c.getSurname(), c.getNickname(), mask(c.getCpf()),
-                maskPhone(c.getTelephone()), c.getResidence(), c.getDescription());
+                c.getFullname() + " ", "Consultou os dados detalhados do cliente"));
+        return new DetalhesCliente(c.getId(), c.getFullname(), c.getNickname(), mask(c.getCpf()),
+                c.getTelephone(), c.getResidence(), c.getDescription());
     }
 
     @Transactional
@@ -152,7 +153,7 @@ public class ServicoInadimplencia {
             throw new ExcecaoApi(HttpStatus.CONFLICT, "A dívida já está encerrada");
         debt.setStatus(StatusDivida.PAID);
         auditLogs.save(RegistroAuditoria.of(current, "DAR_BAIXA_DIVIDA", "Divida", debt.getId(),
-                debt.getClient().getName() + " " + debt.getClient().getSurname(),
+                debt.getClient().getFullname(),
                 "Deu baixa na dívida do comércio " + debt.getComercio().getComercioName()));
         return map(debt, current);
     }
@@ -167,7 +168,7 @@ public class ServicoInadimplencia {
                 && current.getPerfilAcesso() == PerfilAcesso.MERCHANT_OWNER
                 && d.getComercio().getComerciante().getId().equals(current.getId());
         return new RespostaDivida(d.getId(),
-                new ResumoCliente(c.getId(), c.getName(), c.getSurname(), c.getNickname(), mask(c.getCpf())),
+                new ResumoCliente(c.getId(), c.getFullname(), c.getNickname(), mask(c.getCpf())),
                 d.getComercio().getId(), d.getComercio().getComercioName(), d.getDividaValue(),
                 d.getDateValue(), d.getCreatedAt(), d.getDescription(), d.isHasInterest(), d.getInterestRate(), d.getStatus(),
                 podeDarBaixa);
@@ -180,11 +181,4 @@ public class ServicoInadimplencia {
         return cpf.substring(0, 3) + ".***.***-" + cpf.substring(9, 11);
     }
 
-    static String maskPhone(String telefone) {
-        if (telefone == null || telefone.length() < 10)
-            return null;
-        return telefone.length() == 11
-                ? "(" + telefone.substring(0, 2) + ") *****-" + telefone.substring(7)
-                : "(" + telefone.substring(0, 2) + ") ****-" + telefone.substring(6);
-    }
 }

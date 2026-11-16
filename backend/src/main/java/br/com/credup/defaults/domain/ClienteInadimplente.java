@@ -6,31 +6,22 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "clientes_inadimplentes", indexes = {
-        @Index(name = "idx_clientes_inadimplentes_nome", columnList = "nome,sobrenome")
+        @Index(name = "idx_clientes_inadimplentes_nome", columnList = "nome_completo")
 })
 public class ClienteInadimplente extends EntidadeBase {
-    @Column(name = "nome", nullable = false) private String name;
-    @Column(name = "sobrenome", nullable = false) private String surname;
+    @Column(name = "nome_completo", nullable = false) private String fullname;
     @Column(name = "apelido", nullable = false, length = 120) private String nickname;
     @Column(unique = true, length = 11) private String cpf;
     @Column(name = "telefone") private String telephone;
     @Column(name = "residencia") private String residence;
     @Column(name = "descricao", columnDefinition = "text") private String description;
 
-    public String getName() {
-        return name;
+    public String getFullname() {
+        return fullname;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getSurname() {
-        return surname;
-    }
-
-    public void setSurname(String surname) {
-        this.surname = surname;
+    public void setFullname(String name) {
+        this.fullname = name;
     }
 
     public String getNickname() {

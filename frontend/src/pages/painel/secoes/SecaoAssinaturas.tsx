@@ -158,7 +158,7 @@ export function SecaoAssinaturas({
           <table className="tabela-relatorio-assinaturas">
             <thead><tr><th>Gestor</th><th>Situação</th><th>Início</th><th>Último pagamento</th><th>Valor pago</th><th>Vencimento</th><th>Acesso</th></tr></thead>
             <tbody>{assinaturasFiltradas.map(item => <tr key={item.id}>
-              <td><strong>{item.nomeComerciante}</strong><small>{item.emailMascarado}</small></td>
+              <td><strong>{item.nomeComerciante}</strong><small>{item.email}</small></td>
               <td><span className={`indicador ${item.acessoOperacional ? 'aprovado' : 'rejeitado'}`}>{ROTULOS_STATUS_ASSINATURA[item.status]}</span></td>
               <td>{formatarData(item.inicioAssinatura)}</td>
               <td>{formatarDataHora(item.ultimoPagamentoEm)}</td>
@@ -177,7 +177,7 @@ export function SecaoAssinaturas({
           <table className="tabela-relatorio-assinaturas">
             <thead><tr><th>Gestor</th><th>Pagamento confirmado em</th><th>Valor pago</th><th>Acesso renovado até</th></tr></thead>
             <tbody>{historico.map(pagamento => <tr key={pagamento.id}>
-              <td><strong>{pagamento.nomeGestor}</strong><small>{pagamento.emailMascarado}</small></td>
+              <td><strong>{pagamento.nomeGestor}</strong><small>{pagamento.email}</small></td>
               <td>{formatarDataHora(pagamento.pagoEm)}</td>
               <td>{formatarMoeda(pagamento.valor)}</td>
               <td>{formatarData(pagamento.acessoValidoAte)}</td>

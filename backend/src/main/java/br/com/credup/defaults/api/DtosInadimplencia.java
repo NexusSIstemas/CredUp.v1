@@ -15,7 +15,6 @@ public final class DtosInadimplencia {
 
     public record SolicitacaoCliente(
             @NotBlank String nome,
-            @NotBlank String sobrenome,
             @NotBlank
             @Size(max = 120)
             String apelido,
@@ -41,19 +40,17 @@ public final class DtosInadimplencia {
 
     public record ResumoCliente(
             UUID id,
-            String nome,
-            String sobrenome,
+            String nomeCompleto,
             String apelido,
             String cpfMascarado) {
     }
 
     public record DetalhesCliente(
             UUID id,
-            String nome,
-            String sobrenome,
+            String nomeCompleto,
             String apelido,
             String cpfMascarado,
-            String telefoneMascarado,
+            String telefone,
             String residencia,
             String descricao) {
     }

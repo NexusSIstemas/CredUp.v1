@@ -32,8 +32,7 @@ class ServicoInadimplenciaTest {
         UUID merchantId = UUID.randomUUID();
         when(merchant.getId()).thenReturn(merchantId);
         when(merchant.getPerfilAcesso()).thenReturn(PerfilAcesso.MERCHANT_OWNER);
-        when(merchant.getName()).thenReturn("Comerciante");
-        when(merchant.getSurname()).thenReturn("Teste");
+        when(merchant.getFullname()).thenReturn("Comerciante");
         var commerce = mock(Comercio.class);
         when(commerce.getComerciante()).thenReturn(merchant);
         var client = mock(ClienteInadimplente.class);

@@ -48,6 +48,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   const [query, setQuery] = useState('')
   const [resetRequests, setResetRequests] = useState<SolicitacaoRedefinicaoSenha[]>([])
   const [temporaryPassword, setTemporaryPassword] = useState('')
+  const [temporaryPasswordEmail, setEmailSenhaTemporaria] = useState('')
   const [perfil, setPerfil] = useState<Perfil | null>(null)
   const [employees, setFuncionarios] = useState<Funcionario[]>([])
   const [staffPassword, setStaffPassword] = useState('')
@@ -312,7 +313,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
           idComercio: form.get('idComercio'), valorDivida,
           dataDivida: form.get('dataDivida'), descricao: form.get('descricao'), possuiJuros: false,
           cliente: {
-            nome: form.get('nome'), sobrenome: form.get('sobrenome'), apelido: form.get('apelido'),
+            nome: form.get('nome'), apelido: form.get('apelido'),
             cpf: somenteDigitos(form.get('cpf')) || null,
             telefone: somenteDigitos(form.get('telefone')), residencia: form.get('residencia')
           }
@@ -334,8 +335,9 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
 
   async function approveReset(id: string) {
     try {
-      const result = await api<{ senhaTemporaria: string }>(`/auth/password-resets/${id}/approve`, { method: 'POST' })
+      const result = await api<{ email: string; senhaTemporaria: string }>(`/auth/password-resets/${id}/approve`, { method: 'POST' })
       setTemporaryPassword(result.senhaTemporaria)
+      setEmailSenhaTemporaria(result.email)
       showAlert('Senha temporária gerada. Entregue-a somente após confirmar a identidade.', 'sucesso')
       loadResets()
     } catch (erro) { showError(erro) }
@@ -349,6 +351,17 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
     } catch (erro) { showError(erro) }
   }
 
+  async function generateTemporaryPasswordForUser(idUsuario: string) {
+    try {
+      const result = await api<{ nomeCompleto: string; email: string; senhaTemporaria: string }>(`/auth/users/${idUsuario}/temporary-password`, { method: 'POST' })
+      setTemporaryPassword(result.senhaTemporaria)
+      setEmailSenhaTemporaria(result.email)
+      showAlert(`Senha temporária gerada para ${result.nomeCompleto}. Entregue-a somente após confirmar a identidade.`, 'sucesso')
+    } catch (erro) {
+      showError(erro)
+    }
+  }
+
   async function updatePerfil(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
@@ -356,15 +369,14 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
       const updated = await api<Perfil>('/profile', {
         method: 'PATCH',
         body: JSON.stringify({
-          nome: form.get('nome'),
-          sobrenome: form.get('sobrenome'),
+          nomeCompleto: form.get('nomeCompleto'),
           telefone: somenteDigitos(form.get('telefone')),
           email: form.get('email'),
           dataNascimento: form.get('dataNascimento') || null
         })
       })
       setPerfil(updated)
-      onSessaoChange({ ...sessao, nome: updated.nome })
+      onSessaoChange({ ...sessao, nome: updated.nomeCompleto })
       showAlert('Informações do perfil atualizadas.', 'sucesso')
     } catch (erro) { showError(erro) }
   }
@@ -408,7 +420,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
       const result = await api<{ funcionario: Funcionario; senhaTemporaria: string }>('/staff', {
         method: 'POST',
         body: JSON.stringify({
-          nome: form.get('nome'), sobrenome: form.get('sobrenome'),
+          nomeCompleto: form.get('nomeCompleto'),
           telefone: somenteDigitos(form.get('telefone')), cpf: somenteDigitos(form.get('cpf')),
           email: form.get('email'),
           dataNascimento: form.get('dataNascimento') || null
@@ -449,7 +461,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   async function deleteStaff(funcionario: Funcionario) {
     const confirmed = await confirmarExclusao(
       'Excluir operador?',
-      `O operador "${funcionario.nome} ${funcionario.sobrenome}" será excluído. Esta ação não poderá ser desfeita.`
+      `O operador "${funcionario.nomeCompleto}" será excluído. Esta ação não poderá ser desfeita.`
     )
     if (!confirmed) return
     try {
@@ -486,7 +498,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
 
   const filteredSubscriptions = subscriptions
     .filter(item => subscriptionStatus === 'TODAS' || item.status === subscriptionStatus)
-    .filter(item => `${item.nomeComerciante} ${item.emailMascarado}`
+    .filter(item => `${item.nomeComerciante} ${item.email}`
       .toLocaleLowerCase('pt-BR')
       .includes(subscriptionQuery.trim().toLocaleLowerCase('pt-BR')))
     .sort((first, second) => Number(Boolean(second.solicitacaoAtivacaoEm)) - Number(Boolean(first.solicitacaoAtivacaoEm)))
@@ -547,7 +559,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
               {admin && commerce.status === 'PENDING' && <div className="acoes-mercado"><button className="pequeno" onClick={() => review(commerce.id, 'APPROVED')}>Aprovar</button><button className="pequeno perigo" onClick={() => review(commerce.id, 'REJECTED')}>Reprovar</button></div>}
               {owner && subscription?.acessoOperacional && <div className="acoes-mercado"><button className="pequeno" onClick={() => setEditingCommerce(commerce)}>Editar dados</button><button className="pequeno perigo" onClick={() => deleteComercio(commerce)}>Excluir</button></div>}
             </article>)}
-            {!commerces.length && <p className="vazio">Nenhum comércio cadastrado.</p>}</div>
+              {!commerces.length && <p className="vazio">Nenhum comércio cadastrado.</p>}</div>
           </section>
           {owner && subscription?.acessoOperacional && editingCommerce && <section className="painel-conteudo painel-fixo"><h2>Editar comércio</h2>
             <form onSubmit={updateComercio} className="formulario-compacto">
@@ -605,20 +617,19 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
                 return
               }
               loadDividas(busca)
-            }}><CampoFlutuante label="Buscar por CPF ou apelido"><input value={query} maxLength={120} onChange={event => {
+            }}><CampoFlutuante label="insira o nome, CPF, ou apelido"><input value={query} maxLength={120} onChange={event => {
               setQuery(event.target.value)
             }} placeholder=" " /></CampoFlutuante><button>Buscar</button></form>
           </div>
           <div className="envoltorio-tabela"><table><thead><tr><th>Cliente</th><th>CPF</th><th>Comércio</th><th>Data da dívida</th><th>Data do cadastro</th><th>Valor</th><th>Status</th><th></th></tr></thead>
-            <tbody>{debts.map(debt => <tr key={debt.id}><td><strong className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? `${debt.cliente.nome} ${debt.cliente.sobrenome}` : 'Cliente protegido'}</strong>{privacyVisible && <small>Apelido: {debt.cliente.apelido}</small>}</td><td className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? debt.cliente.cpfMascarado ?? 'Não informado' : '***.***.***-**'}</td><td>{debt.nomeComercio}</td><td>{new Date(`${debt.dataDivida}T12:00:00`).toLocaleDateString('pt-BR')}</td><td>{new Date(debt.dataCadastro).toLocaleString('pt-BR')}</td><td className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? debt.valorDivida.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ •••••'}</td><td><span className={`indicador ${CLASSES_STATUS_DIVIDA[debt.status]}`}>{ROTULOS_STATUS_DIVIDA[debt.status]}</span></td><td>{debt.status !== 'PAID' && debt.podeDarBaixa && <button className="pequeno" onClick={() => settle(debt.id)}>Dar baixa</button>}</td></tr>)}
+            <tbody>{debts.map(debt => <tr key={debt.id}><td><strong className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? debt.cliente.nomeCompleto : 'Cliente protegido'}</strong>{privacyVisible && <small>Apelido: {debt.cliente.apelido}</small>}</td><td className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? debt.cliente.cpfMascarado ?? 'Não informado' : '***.***.***-**'}</td><td>{debt.nomeComercio}</td><td>{new Date(`${debt.dataDivida}T12:00:00`).toLocaleDateString('pt-BR')}</td><td>{new Date(debt.dataCadastro).toLocaleString('pt-BR')}</td><td className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? debt.valorDivida.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ •••••'}</td><td><span className={`indicador ${CLASSES_STATUS_DIVIDA[debt.status]}`}>{ROTULOS_STATUS_DIVIDA[debt.status]}</span></td><td>{debt.status !== 'PAID' && debt.podeDarBaixa && <button className="pequeno" onClick={() => settle(debt.id)}>Dar baixa</button>}</td></tr>)}
               {!debts.length && <tr><td colSpan={8} className="vazio">Nenhum registro encontrado.</td></tr>}</tbody></table></div>
         </section>
         {(owner || staff) && <section className="painel-conteudo painel-formulario"><div className="cabecalho-painel-conteudo"><div><h2>Nova inadimplência</h2><p>Cadastre um cliente e sua dívida em um comércio aprovado.</p></div></div>
           <form onSubmit={createDivida} className="formulario-compacto formulario-divida">
             <CampoFlutuante label="Selecione o comércio"><select name="idComercio" defaultValue="" required><option value="" disabled></option>{commerces.filter(commerce => commerce.status === 'APPROVED').map(commerce => <option key={commerce.id} value={commerce.id}>{commerce.nomeComercio}</option>)}</select></CampoFlutuante>
             <div className="grade-formulario">
-              <CampoFlutuante label="Nome"><input name="nome" placeholder=" " required /></CampoFlutuante>
-              <CampoFlutuante label="Sobrenome"><input name="sobrenome" placeholder=" " required /></CampoFlutuante>
+              <CampoFlutuante label="Nome Completo"><input name="nome" placeholder=" " required /></CampoFlutuante>
               <CampoFlutuante label="Apelido"><input name="apelido" maxLength={120} placeholder=" " required /></CampoFlutuante>
               <CampoFlutuante label="CPF (opcional): 000.000.000-00"><input name="cpf" inputMode="numeric" maxLength={14} placeholder=" " onInput={event => { event.currentTarget.value = mascararCpf(event.currentTarget.value) }} /></CampoFlutuante>
               <CampoFlutuante label="Telefone: (11) 99999-9999"><input name="telefone" inputMode="tel" maxLength={15} placeholder=" " onInput={event => { event.currentTarget.value = mascararTelefone(event.currentTarget.value) }} /></CampoFlutuante>
@@ -671,10 +682,12 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
       {section === 'recovery' && admin && <SecaoRecuperacao
         solicitacoes={resetRequests}
         senhaTemporaria={temporaryPassword}
+        emailSenhaTemporaria={temporaryPasswordEmail}
         dadosVisiveis={privacyVisible}
         aprovar={approveReset}
         rejeitar={rejectReset}
-        fecharSenha={() => setTemporaryPassword('')}
+        gerarSenhaDireta={generateTemporaryPasswordForUser}
+        fecharSenha={() => { setTemporaryPassword(''); setEmailSenhaTemporaria('') }}
       />}
 
       {section === 'auditoria' && admin && <SecaoAuditoria
@@ -687,22 +700,22 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
         {!perfil ? <section className="painel-conteudo"><p className="vazio">Carregando suas informações…</p></section>
           : <div className="estrutura-perfil">
             <section className="painel-conteudo resumo-perfil">
-              <div className="avatar-perfil-grande">{perfil.nome[0]}{perfil.sobrenome[0]}</div>
-              <h2>{perfil.nome} {perfil.sobrenome}</h2>
+              <div className="avatar-perfil-grande">{perfil.nomeCompleto[0]}</div>
+              <h2>{perfil.nomeCompleto}</h2>
               <span className="perfil-acesso">{ROTULOS_PERFIL[perfil.perfilAcesso]}</span>
               <dl>
                 <div><dt>CPF</dt><dd className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? perfil.cpfMascarado : '***.***.***-**'}</dd></div>
-                <div><dt>E-mail</dt><dd className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? perfil.emailMascarado : '••••••@••••••.•••'}</dd></div>
-                <div><dt>Telefone</dt><dd className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? perfil.telefoneMascarado : '(**) *****-****'}</dd></div>
+                <div><dt>E-mail</dt><dd>{perfil.email}</dd></div>
+                <div><dt>Telefone</dt><dd>{perfil.telefone ?? 'Não informado'}</dd></div>
               </dl>
             </section>
             <section className="painel-conteudo">
               <div className="cabecalho-painel-conteudo"><div><h2>Editar informações</h2><p>O CPF é um identificador da conta e não pode ser alterado.</p></div></div>
               <form className="formulario-compacto" onSubmit={updatePerfil}>
-                <div className="grade-formulario"><CampoFlutuante label="Nome"><input name="nome" placeholder=" " defaultValue={perfil.nome} required /></CampoFlutuante><CampoFlutuante label="Sobrenome"><input name="sobrenome" placeholder=" " defaultValue={perfil.sobrenome} required /></CampoFlutuante></div>
+                <CampoFlutuante label="Nome completo"><input name="nomeCompleto" autoComplete="name" placeholder=" " defaultValue={perfil.nomeCompleto} required /></CampoFlutuante>
                 <CampoFlutuante label="CPF"><input value={perfil.cpfMascarado} placeholder=" " disabled /></CampoFlutuante>
-                <CampoFlutuante label={`Novo telefone (atual: ${perfil.telefoneMascarado})`}><input name="telefone" inputMode="tel" maxLength={15} placeholder=" " onInput={event => { event.currentTarget.value = mascararTelefone(event.currentTarget.value) }} /></CampoFlutuante>
-                <CampoFlutuante label={`Novo e-mail (atual: ${perfil.emailMascarado})`}><input name="email" type="email" placeholder=" " /></CampoFlutuante>
+                <CampoFlutuante label={`Novo telefone (atual: ${perfil.telefone ?? 'não informado'})`}><input name="telefone" inputMode="tel" maxLength={15} placeholder=" " onInput={event => { event.currentTarget.value = mascararTelefone(event.currentTarget.value) }} /></CampoFlutuante>
+                <CampoFlutuante label={`Novo e-mail (atual: ${perfil.email})`}><input name="email" type="email" placeholder=" " /></CampoFlutuante>
                 <CampoFlutuante label="Data de nascimento (opcional)"><input name="dataNascimento" type="date" placeholder=" " min="1900-01-01" max={dataMaximaNascimento()} defaultValue={perfil.dataNascimento ?? ''}
                   onInvalid={event => event.currentTarget.setCustomValidity('O usuário deve ter pelo menos 18 anos')}
                   onInput={event => { event.currentTarget.setCustomValidity(''); limitarAnoData(event.currentTarget) }} /></CampoFlutuante>

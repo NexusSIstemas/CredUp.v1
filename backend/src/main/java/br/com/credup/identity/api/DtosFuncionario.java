@@ -10,8 +10,7 @@ public final class DtosFuncionario {
     }
 
     public record SolicitacaoCriacaoFuncionario(
-            @NotBlank String nome,
-            @NotBlank String sobrenome,
+            @NotBlank String nomeCompleto,
             @NotBlank @Pattern(regexp = "\\d{10,11}") String telefone,
             @NotBlank
             @CPF(message = "CPF inválido")
@@ -25,11 +24,10 @@ public final class DtosFuncionario {
 
     public record RespostaFuncionario(
             UUID id,
-            String nome,
-            String sobrenome,
-            String emailMascarado,
+            String nomeCompleto,
+            String email,
             String cpfMascarado,
-            String telefoneMascarado,
+            String telefone,
             LocalDate dataNascimento,
             boolean ativo) {
     }

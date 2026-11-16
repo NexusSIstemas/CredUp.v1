@@ -25,7 +25,7 @@ export interface Assinatura {
   id: string
   idComerciante: string
   nomeComerciante: string
-  emailMascarado: string
+  email: string
   plano: PlanoComercial
   proximoPlano: PlanoComercial | null
   status: StatusAssinatura
@@ -71,18 +71,18 @@ export interface SolicitacaoRedefinicaoSenha {
   id: string
   nome: string
   cpfMascarado: string
-  telefoneMascarado: string
+  telefone: string
+  email: string
   nomeComercio: string
   solicitadoEm: string
 }
 
 export interface Perfil {
   id: string
-  nome: string
-  sobrenome: string
-  telefoneMascarado: string
+  nomeCompleto: string
+  telefone: string
   cpfMascarado: string
-  emailMascarado: string
+  email: string
   dataNascimento: string | null
   perfilAcesso: PerfilAcesso
   pinRecuperacaoConfigurado: boolean
@@ -91,7 +91,7 @@ export interface Perfil {
 export interface PagamentoAssinatura {
   id: string
   nomeGestor: string
-  emailMascarado: string
+  email: string
   valor: number
   pagoEm: string
   acessoValidoAte: string
@@ -99,11 +99,10 @@ export interface PagamentoAssinatura {
 
 export interface Funcionario {
   id: string
-  nome: string
-  sobrenome: string
-  emailMascarado: string
+  nomeCompleto: string
+  email: string
   cpfMascarado: string
-  telefoneMascarado: string
+  telefone: string
   dataNascimento: string | null
   ativo: boolean
 }
@@ -127,8 +126,7 @@ export interface Divida {
   id: string
   cliente: {
     id: string
-    nome: string
-    sobrenome: string
+    nomeCompleto: string
     apelido: string
     cpfMascarado: string | null
   }

@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.*;
 
 public interface RepositorioFuncionarioComercio extends JpaRepository<FuncionarioComercio, UUID> {
-    List<FuncionarioComercio> findByResponsavelIdOrderByNameAsc(UUID responsavelId);
+    List<FuncionarioComercio> findByResponsavelIdOrderByFullnameAsc(UUID responsavelId);
     Optional<FuncionarioComercio> findByIdAndResponsavelId(UUID id, UUID responsavelId);
     long countByResponsavelIdAndEnabledTrue(UUID responsavelId);
 }
