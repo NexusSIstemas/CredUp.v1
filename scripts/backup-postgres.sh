@@ -13,6 +13,10 @@ if [ ! -f "$ENV_FILE" ]; then
   exit 1
 fi
 
+RCLONE_REMOTE=$(sed -n 's/^BACKUP_GOOGLE_DRIVE_REMOTE=//p' "$ENV_FILE" | tail -n 1)
+RCLONE_DIRECTORY=$(sed -n 's/^BACKUP_GOOGLE_DRIVE_DIRECTORY=//p' "$ENV_FILE" | tail -n 1)
+DRIVE_RETENTION_DAYS=$(sed -n 's/^BACKUP_GOOGLE_DRIVE_RETENTION_DAYS=//p' "$ENV_FILE" | tail -n 1)
+
 mkdir -p "$BACKUP_DIR"
 cd "$PROJECT_DIR"
 
@@ -23,10 +27,37 @@ docker compose \
   sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --format=custom' \
   > "$BACKUP_DIR/credup-$TIMESTAMP.dump"
 
+BACKUP_FILE="$BACKUP_DIR/credup-$TIMESTAMP.dump"
+
+if [ -n "$RCLONE_REMOTE" ] || [ -n "$RCLONE_DIRECTORY" ]; then
+  if [ -z "$RCLONE_REMOTE" ] || [ -z "$RCLONE_DIRECTORY" ]; then
+    echo "Defina BACKUP_GOOGLE_DRIVE_REMOTE e BACKUP_GOOGLE_DRIVE_DIRECTORY juntos."
+    exit 1
+  fi
+  if ! command -v rclone >/dev/null 2>&1; then
+    echo "rclone não está instalado; a cópia no Google Drive não pode ser confirmada."
+    exit 1
+  fi
+
+  rclone copyto "$BACKUP_FILE" "$RCLONE_REMOTE:$RCLONE_DIRECTORY/$(basename "$BACKUP_FILE")" \
+    --checksum \
+    --retries 3 \
+    --low-level-retries 10
+
+  if [ -n "$DRIVE_RETENTION_DAYS" ]; then
+    rclone delete "$RCLONE_REMOTE:$RCLONE_DIRECTORY" \
+      --include 'credup-*.dump' \
+      --min-age "${DRIVE_RETENTION_DAYS}d"
+    rclone rmdirs "$RCLONE_REMOTE:$RCLONE_DIRECTORY"
+  fi
+
+  echo "Cópia externa confirmada em $RCLONE_REMOTE:$RCLONE_DIRECTORY"
+fi
+
 find "$BACKUP_DIR" \
   -type f \
   -name 'credup-*.dump' \
   -mtime "+$RETENTION_DAYS" \
   -delete
 
-echo "Backup criado em $BACKUP_DIR/credup-$TIMESTAMP.dump"
+echo "Backup criado em $BACKUP_FILE"
