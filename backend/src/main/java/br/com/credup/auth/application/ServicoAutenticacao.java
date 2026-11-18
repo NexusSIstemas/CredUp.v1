@@ -179,6 +179,23 @@ public class ServicoAutenticacao {
                 senhaTemporaria);
     }
 
+    @Transactional(readOnly = true)
+    public List<ResumoUsuarioRecuperacao> buscarUsuariosParaRecuperacao(
+            String nome) {
+        String termo = nome == null ? "" : nome.trim();
+        if (termo.isEmpty()) {
+            return List.of();
+        }
+        return users.findTop10ByFullnameContainingIgnoreCaseAndRoleNotOrderByFullnameAsc(
+                termo, PerfilAcesso.ADMIN_REDE).stream()
+                .map(usuario -> new ResumoUsuarioRecuperacao(
+                        usuario.getId(),
+                        usuario.getFullname(),
+                        usuario.getEmail(),
+                        usuario.getPerfilAcesso()))
+                .toList();
+    }
+
     @Transactional
     public void rejeitarRedefinicao(UUID id) {
         var reset = pending(id);

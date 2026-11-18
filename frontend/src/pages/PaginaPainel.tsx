@@ -6,7 +6,7 @@ import {
   type TomAlerta
 } from '../services/alertas'
 import { CampoFlutuante } from '../components/CampoFlutuante'
-import type { Assinatura, CobrancaPix, StatusCobrancaPix, Comercio, ConfiguracaoPublica, Divida, Funcionario, PagamentoAssinatura, Pagina, PlanoComercial, SolicitacaoRedefinicaoSenha, Perfil, RegistroAuditoria, Sessao, StatusComercio } from '../types'
+import type { Assinatura, CobrancaPix, StatusCobrancaPix, Comercio, ConfiguracaoPublica, Divida, Funcionario, PagamentoAssinatura, Pagina, PlanoComercial, SolicitacaoRedefinicaoSenha, Perfil, RegistroAuditoria, Sessao, StatusComercio, UsuarioRecuperacao } from '../types'
 import {
   CLASSES_STATUS_COMERCIO,
   CLASSES_STATUS_DIVIDA,
@@ -49,6 +49,9 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   const [resetRequests, setResetRequests] = useState<SolicitacaoRedefinicaoSenha[]>([])
   const [temporaryPassword, setTemporaryPassword] = useState('')
   const [temporaryPasswordEmail, setEmailSenhaTemporaria] = useState('')
+  const [userRecoveryQuery, setBuscaUsuarioRecuperacao] = useState('')
+  const [recoveryUsers, setUsuariosRecuperacao] = useState<UsuarioRecuperacao[]>([])
+  const [recoveryUsersLoading, setBuscandoUsuariosRecuperacao] = useState(false)
   const [perfil, setPerfil] = useState<Perfil | null>(null)
   const [employees, setFuncionarios] = useState<Funcionario[]>([])
   const [staffPassword, setStaffPassword] = useState('')
@@ -159,6 +162,23 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   }, [admin, section])
 
   useEffect(() => {
+    const nome = userRecoveryQuery.trim()
+    if (!admin || section !== 'recovery' || !nome) {
+      setUsuariosRecuperacao([])
+      setBuscandoUsuariosRecuperacao(false)
+      return
+    }
+    setBuscandoUsuariosRecuperacao(true)
+    const timer = window.setTimeout(() => {
+      api<UsuarioRecuperacao[]>(`/auth/users/search?nome=${encodeURIComponent(nome)}`)
+        .then(setUsuariosRecuperacao)
+        .catch(showError)
+        .finally(() => setBuscandoUsuariosRecuperacao(false))
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [admin, section, userRecoveryQuery])
+
+  useEffect(() => {
     if (!pixCharge || ['CONCLUIDA', 'processed'].includes(pixCharge.status)) return
     const interval = window.setInterval(async () => {
       try {
@@ -201,6 +221,8 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
     setSecao(next)
     setTemporaryPassword('')
     setStaffPassword('')
+    setBuscaUsuarioRecuperacao('')
+    setUsuariosRecuperacao([])
     if (next === 'perfil') loadPerfil()
     if (next === 'staff') loadStaff()
     if (next === 'auditoria') loadAuditoria()
@@ -684,8 +706,12 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
         senhaTemporaria={temporaryPassword}
         emailSenhaTemporaria={temporaryPasswordEmail}
         dadosVisiveis={privacyVisible}
+        buscaUsuarios={userRecoveryQuery}
+        usuariosEncontrados={recoveryUsers}
+        buscandoUsuarios={recoveryUsersLoading}
         aprovar={approveReset}
         rejeitar={rejectReset}
+        alterarBuscaUsuarios={setBuscaUsuarioRecuperacao}
         gerarSenhaDireta={generateTemporaryPasswordForUser}
         fecharSenha={() => { setTemporaryPassword(''); setEmailSenhaTemporaria('') }}
       />}

@@ -77,6 +77,13 @@ export interface SolicitacaoRedefinicaoSenha {
   solicitadoEm: string
 }
 
+export interface UsuarioRecuperacao {
+  id: string
+  nomeCompleto: string
+  email: string
+  perfilAcesso: PerfilAcesso
+}
+
 export interface Perfil {
   id: string
   nomeCompleto: string
