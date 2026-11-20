@@ -77,6 +77,13 @@ public class ControladorAutenticacao {
         return service.gerarSenhaTemporariaAdministrativa(administrador, idUsuario);
     }
 
+    @GetMapping("/users/search")
+    @PreAuthorize("hasRole('ADMIN_REDE')")
+    List<ResumoUsuarioRecuperacao> buscarUsuariosParaRecuperacao(
+            @RequestParam("nome") String nome) {
+        return service.buscarUsuariosParaRecuperacao(nome);
+    }
+
     @PostMapping("/password-resets/{id}/reject")
     @PreAuthorize("hasRole('ADMIN_REDE')")
     ResponseEntity<Void> reject(@PathVariable UUID id) {

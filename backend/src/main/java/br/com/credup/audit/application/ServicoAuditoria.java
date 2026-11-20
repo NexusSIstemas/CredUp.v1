@@ -2,6 +2,7 @@ package br.com.credup.audit.application;
 
 import br.com.credup.audit.domain.RegistroAuditoria;
 import br.com.credup.audit.repository.RepositorioRegistroAuditoria;
+import br.com.credup.identity.domain.Usuario;
 import br.com.credup.shared.domain.PerfilAcesso;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +16,13 @@ public class ServicoAuditoria {
 
     public ServicoAuditoria(RepositorioRegistroAuditoria repositorio) {
         this.repositorio = repositorio;
+    }
+
+    @Transactional
+    public void registrar(Usuario autor, String acao, String entidadeAlvo, UUID alvoId,
+            String descricaoAlvo, String detalhes) {
+        repositorio.save(RegistroAuditoria.of(
+                autor, acao, entidadeAlvo, alvoId, descricaoAlvo, detalhes));
     }
 
     @Transactional(readOnly = true)

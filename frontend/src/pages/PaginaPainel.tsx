@@ -5,26 +5,24 @@ import {
   mostrarAlerta,
   type TomAlerta
 } from '../services/alertas'
-import { CampoFlutuante } from '../components/CampoFlutuante'
-import type { Assinatura, CobrancaPix, StatusCobrancaPix, Comercio, ConfiguracaoPublica, Divida, Funcionario, PagamentoAssinatura, Pagina, PlanoComercial, SolicitacaoRedefinicaoSenha, Perfil, RegistroAuditoria, Sessao, StatusComercio } from '../types'
+import type {
+  Assinatura,
+  CobrancaPix,
+  StatusCobrancaPix,
+  ConfiguracaoPublica,
+  Divida,
+  Funcionario,
+  PagamentoAssinatura,
+  Pagina,
+  PlanoComercial,
+  SolicitacaoRedefinicaoSenha,
+  Perfil,
+  RegistroAuditoria,
+  Sessao,
+  UsuarioRecuperacao
+} from '../types'
+import type { SecaoPainel } from './painel/constantes'
 import {
-  CLASSES_STATUS_COMERCIO,
-  CLASSES_STATUS_DIVIDA,
-  ROTULOS_PERFIL,
-  ROTULOS_STATUS_COMERCIO,
-  ROTULOS_STATUS_DIVIDA,
-  descreverAcaoAuditoria,
-  type SecaoPainel
-} from './painel/constantes'
-import {
-  dataAtual,
-  dataMaximaNascimento,
-  limitarAnoData,
-  mascararCep,
-  mascararCnpj,
-  mascararCpf,
-  mascararMoeda,
-  mascararTelefone,
   obterValorMoeda,
   somenteDigitos
 } from './painel/formatadores'
@@ -33,7 +31,11 @@ import { SecaoRecuperacao } from './painel/secoes/SecaoRecuperacao'
 import { SecaoVisaoGeral } from './painel/secoes/SecaoVisaoGeral'
 import { SecaoFuncionarios } from './painel/secoes/SecaoFuncionarios'
 import { SecaoAssinaturas } from './painel/secoes/SecaoAssinaturas'
+import { SecaoComercios } from './painel/secoes/SecaoComercios'
+import { SecaoPerfil } from './painel/secoes/SecaoPerfil'
+import { SecaoInadimplentes } from './painel/secoes/SecaoInadimplentes'
 import { BarraLateralPainel, CabecalhoPainel } from './painel/NavegacaoPainel'
+import { useComercios } from './painel/hooks/useComercios'
 
 export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   sessao: Sessao
@@ -42,17 +44,28 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
 }) {
   const [section, setSecao] = useState<SecaoPainel>('overview')
   const [privacyVisible, setPrivacyVisible] = useState(false)
-  const [commerces, setComercios] = useState<Comercio[]>([])
-  const [commercesLoaded, setComerciosCarregados] = useState(false)
+  const {
+    comercios: commerces,
+    carregados: commercesLoaded,
+    emEdicao: editingCommerce,
+    definirEmEdicao: setEditingCommerce,
+    carregar: loadComercios,
+    solicitarCadastro: createComercio,
+    salvarEdicao: updateComercio,
+    excluir: deleteComercio,
+    avaliar: review
+  } = useComercios()
   const [debts, setDividas] = useState<Divida[]>([])
   const [query, setQuery] = useState('')
   const [resetRequests, setResetRequests] = useState<SolicitacaoRedefinicaoSenha[]>([])
   const [temporaryPassword, setTemporaryPassword] = useState('')
   const [temporaryPasswordEmail, setEmailSenhaTemporaria] = useState('')
+  const [userRecoveryQuery, setBuscaUsuarioRecuperacao] = useState('')
+  const [recoveryUsers, setUsuariosRecuperacao] = useState<UsuarioRecuperacao[]>([])
+  const [recoveryUsersLoading, setBuscandoUsuariosRecuperacao] = useState(false)
   const [perfil, setPerfil] = useState<Perfil | null>(null)
   const [employees, setFuncionarios] = useState<Funcionario[]>([])
   const [staffPassword, setStaffPassword] = useState('')
-  const [editingCommerce, setEditingCommerce] = useState<Comercio | null>(null)
   const [auditRecords, setRegistrosAuditoria] = useState<RegistroAuditoria[]>([])
   const [auditOnline, setAuditoriaOnline] = useState(false)
   const [generatingReport, setGerandoRelatorio] = useState(false)
@@ -77,10 +90,6 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
     void mostrarAlerta(text, tone)
   }
   const showError = (erro: unknown) => showAlert(erro instanceof Error ? erro.message : 'Erro inesperado', 'erro')
-  const loadComercios = () => api<Comercio[]>('/commerces')
-    .then(setComercios)
-    .catch(showError)
-    .finally(() => setComerciosCarregados(true))
   const loadDividas = (busca = '') => api<Pagina<Divida>>('/get_inadimplentes', {
     method: 'POST',
     body: JSON.stringify({ busca: busca.trim() || null })
@@ -159,23 +168,55 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   }, [admin, section])
 
   useEffect(() => {
-    if (!pixCharge || ['CONCLUIDA', 'processed'].includes(pixCharge.status)) return
+    const nome = userRecoveryQuery.trim()
+    if (!admin || section !== 'recovery' || !nome) {
+      setUsuariosRecuperacao([])
+      setBuscandoUsuariosRecuperacao(false)
+      return
+    }
+    setBuscandoUsuariosRecuperacao(true)
+    const timer = window.setTimeout(() => {
+      api<UsuarioRecuperacao[]>(`/auth/users/search?nome=${encodeURIComponent(nome)}`)
+        .then(setUsuariosRecuperacao)
+        .catch(showError)
+        .finally(() => setBuscandoUsuariosRecuperacao(false))
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [admin, section, userRecoveryQuery])
+
+  useEffect(() => {
+    if (!pixCharge) return
+    const txid = pixCharge.txid
+    let ativo = true
+    let consultando = false
     const interval = window.setInterval(async () => {
+      if (consultando) return
+      consultando = true
       try {
-        const status = await api<StatusCobrancaPix>(`/assinaturas/minha/cobranca-pix/${pixCharge.txid}`)
-        setCobrancaPix(atual => atual ? { ...atual, status: status.status } : atual)
+        const status = await api<StatusCobrancaPix>(`/assinaturas/minha/cobranca-pix/${txid}`)
+        if (!ativo) return
         if (status.pago) {
           window.clearInterval(interval)
+          setCobrancaPix(atual => atual?.txid === txid ? null : atual)
           showAlert('Pagamento confirmado. Sua assinatura foi ativada.', 'sucesso')
           loadSubscription()
           loadSubscriptionHistory()
+        } else {
+          setCobrancaPix(atual => atual?.txid === txid
+            ? { ...atual, status: status.status }
+            : atual)
         }
       } catch {
         // Uma falha temporária não interrompe a tela nem duplica a cobrança.
+      } finally {
+        consultando = false
       }
     }, 5_000)
-    return () => window.clearInterval(interval)
-  }, [pixCharge?.txid, pixCharge?.status])
+    return () => {
+      ativo = false
+      window.clearInterval(interval)
+    }
+  }, [pixCharge?.txid])
 
   function openSecao(next: SecaoPainel) {
     if (owner && subscriptionLoaded && !subscription?.acessoOperacional
@@ -201,6 +242,8 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
     setSecao(next)
     setTemporaryPassword('')
     setStaffPassword('')
+    setBuscaUsuarioRecuperacao('')
+    setUsuariosRecuperacao([])
     if (next === 'perfil') loadPerfil()
     if (next === 'staff') loadStaff()
     if (next === 'auditoria') loadAuditoria()
@@ -222,79 +265,6 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
     } finally {
       setPixCarregando(false)
     }
-  }
-
-  async function createComercio(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const formElement = event.currentTarget
-    const form = new FormData(formElement)
-    try {
-      await api('/commerces', {
-        method: 'POST',
-        body: JSON.stringify({
-          nomeComercio: form.get('nomeComercio'),
-          cnpj: somenteDigitos(form.get('cnpj')),
-          endereco: {
-            rua: form.get('rua'), cidade: form.get('cidade'), cep: somenteDigitos(form.get('cep')),
-            numberComercio: form.get('numberComercio'), pontoReferencia: form.get('pontoReferencia')
-          }
-        })
-      })
-      formElement.reset()
-      showAlert('Comércio enviado para aprovação.', 'sucesso')
-      loadComercios()
-    } catch (erro) { showError(erro) }
-  }
-
-  async function updateComercio(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!editingCommerce) return
-    const form = new FormData(event.currentTarget)
-    try {
-      await api(`/commerces/${editingCommerce.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          nomeComercio: form.get('nomeComercio'),
-          endereco: {
-            rua: form.get('rua'),
-            cidade: form.get('cidade'),
-            cep: somenteDigitos(form.get('cep')),
-            numberComercio: form.get('numberComercio'),
-            pontoReferencia: form.get('pontoReferencia')
-          }
-        })
-      })
-      setEditingCommerce(null)
-      showAlert('Dados do comércio atualizados.', 'sucesso')
-      loadComercios()
-    } catch (erro) { showError(erro) }
-  }
-
-  async function deleteComercio(comercio: Comercio) {
-    const confirmed = await confirmarExclusao(
-      'Excluir comércio?',
-      `O comércio "${comercio.nomeComercio}" será excluído. Esta ação não poderá ser desfeita.`
-    )
-    if (!confirmed) return
-    try {
-      await api(`/commerces/${comercio.id}`, { method: 'DELETE' })
-      if (editingCommerce?.id === comercio.id) setEditingCommerce(null)
-      showAlert('Comércio excluído.', 'sucesso')
-      loadComercios()
-    } catch (erro) { showError(erro) }
-  }
-
-  async function review(id: string, status: StatusComercio) {
-    try {
-      await api(`/commerces/${id}/review`, { method: 'PATCH', body: JSON.stringify({ status }) })
-      showAlert(
-        status === 'APPROVED'
-          ? 'Comércio aprovado.'
-          : 'Comércio reprovado.',
-        'sucesso'
-      )
-      loadComercios()
-    } catch (erro) { showError(erro) }
   }
 
   async function createDivida(event: FormEvent<HTMLFormElement>) {
@@ -547,102 +517,45 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
         abrirSecao={openSecao}
       />}
 
-      {section === 'commerces' && <section className="visualizacao-secao animar-entrada" key="commerces">
-        <div className="titulo-secao"><div><p className="sobretitulo">Estabelecimentos</p><h2>Comércios</h2></div><p>{admin ? 'Analise e acompanhe todos os mercados da rede.' : 'Cadastre e acompanhe seus estabelecimentos.'}</p></div>
-        <div className={admin ? 'coluna-unica' : 'colunas-secao'}>
-          <section className="painel-conteudo">
-            <div className="cabecalho-painel-conteudo"><div><h2>{admin ? 'Mercados cadastrados' : 'Meus comércios'}</h2><p>{commerces.length} estabelecimento(s)</p></div></div>
-            <div className="grade-comercios">{commerces.map(commerce => <article className="cartao-mercado" key={commerce.id}>
-              <div className="icone-mercado">{commerce.nomeComercio[0]}</div>
-              <div className="informacoes-mercado"><strong>{commerce.nomeComercio}</strong><small className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? mascararCnpj(commerce.cnpj) : '**.***.***/****-**'}</small></div>
-              <span className={`indicador ${CLASSES_STATUS_COMERCIO[commerce.status]}`}>{ROTULOS_STATUS_COMERCIO[commerce.status]}</span>
-              {admin && commerce.status === 'PENDING' && <div className="acoes-mercado"><button className="pequeno" onClick={() => review(commerce.id, 'APPROVED')}>Aprovar</button><button className="pequeno perigo" onClick={() => review(commerce.id, 'REJECTED')}>Reprovar</button></div>}
-              {owner && subscription?.acessoOperacional && <div className="acoes-mercado"><button className="pequeno" onClick={() => setEditingCommerce(commerce)}>Editar dados</button><button className="pequeno perigo" onClick={() => deleteComercio(commerce)}>Excluir</button></div>}
-            </article>)}
-              {!commerces.length && <p className="vazio">Nenhum comércio cadastrado.</p>}</div>
-          </section>
-          {owner && subscription?.acessoOperacional && editingCommerce && <section className="painel-conteudo painel-fixo"><h2>Editar comércio</h2>
-            <form onSubmit={updateComercio} className="formulario-compacto">
-              <CampoFlutuante label="Nome do comércio"><input name="nomeComercio" defaultValue={editingCommerce.nomeComercio} placeholder=" " required /></CampoFlutuante>
-              <div className="grade-formulario">
-                <CampoFlutuante label="Rua"><input name="rua" defaultValue={editingCommerce.endereco.rua} placeholder=" " required /></CampoFlutuante>
-                <CampoFlutuante label="Número"><input name="numberComercio" defaultValue={editingCommerce.endereco.numberComercio} placeholder=" " required /></CampoFlutuante>
-                <CampoFlutuante label="Cidade"><input name="cidade" defaultValue={editingCommerce.endereco.cidade} placeholder=" " required /></CampoFlutuante>
-                <CampoFlutuante label="CEP"><input name="cep" defaultValue={mascararCep(editingCommerce.endereco.cep)} inputMode="numeric" maxLength={9} placeholder=" " onInput={event => { event.currentTarget.value = mascararCep(event.currentTarget.value) }} required /></CampoFlutuante>
-              </div>
-              <CampoFlutuante label="Ponto de referência"><input name="pontoReferencia" defaultValue={editingCommerce.endereco.pontoReferencia ?? ''} placeholder=" " /></CampoFlutuante>
-              <div className="acoes-formulario"><button>Salvar alterações</button><button type="button" className="fantasma" onClick={() => setEditingCommerce(null)}>Cancelar</button></div>
-            </form>
-          </section>}
-          {owner && <section className="painel-conteudo painel-fixo"><h2>Solicitar cadastro de comércio</h2><p className="suave">A solicitação será analisada pelo administrador. O comércio só entrará na rede depois da aprovação.</p>
-            <form onSubmit={createComercio} className="formulario-compacto">
-              <CampoFlutuante label="Nome do comércio"><input name="nomeComercio" placeholder=" " required /></CampoFlutuante>
-              <CampoFlutuante label="CNPJ: 00.000.000/0000-00"><input name="cnpj" inputMode="numeric" maxLength={18} placeholder=" " onInput={event => { event.currentTarget.value = mascararCnpj(event.currentTarget.value) }} required /></CampoFlutuante>
-              <div className="grade-formulario">
-                <CampoFlutuante label="Rua"><input name="rua" placeholder=" " required /></CampoFlutuante>
-                <CampoFlutuante label="Número"><input name="numberComercio" placeholder=" " required /></CampoFlutuante>
-                <CampoFlutuante label="Cidade"><input name="cidade" placeholder=" " required /></CampoFlutuante>
-                <CampoFlutuante label="CEP: 00000-000"><input name="cep" inputMode="numeric" maxLength={9} placeholder=" " onInput={event => { event.currentTarget.value = mascararCep(event.currentTarget.value) }} required /></CampoFlutuante>
-              </div>
-              <CampoFlutuante label="Ponto de referência"><input name="pontoReferencia" placeholder=" " /></CampoFlutuante>
-              <button>Enviar solicitação</button>
-            </form>
-          </section>}
-        </div>
-      </section>}
+      {section === 'commerces' && <SecaoComercios
+        comercios={commerces}
+        comercioEmEdicao={editingCommerce}
+        dadosVisiveis={privacyVisible}
+        administrador={admin}
+        gestor={owner}
+        acessoOperacional={Boolean(subscription?.acessoOperacional)}
+        solicitarCadastro={createComercio}
+        salvarEdicao={updateComercio}
+        editar={setEditingCommerce}
+        excluir={deleteComercio}
+        avaliar={review}
+      />}
 
-      {section === 'defaults' && <section className="visualizacao-secao animar-entrada" key="defaults">
-        <div className="titulo-secao"><div><p className="sobretitulo">Rede compartilhada</p><h2>Inadimplentes</h2></div><p>Consulte registros e gerencie dívidas sem expor o CPF completo.</p></div>
-        {!staff && (admin || subscription?.podeGerarRelatorio) && <section className="painel-conteudo">
-          <div className="cabecalho-painel-conteudo"><div><h2>Relatório em PDF</h2><p>Escolha um dos seus comércios ou selecione “Todos” para incluir toda a rede.</p></div></div>
-          <form className="filtros-relatorio" onSubmit={generateReport}>
-            <CampoFlutuante label="Data inicial da dívida"><input name="dataInicio" type="date" min="2000-01-01" max={dataAtual()} placeholder=" " required /></CampoFlutuante>
-            <CampoFlutuante label="Data final da dívida"><input name="dataFim" type="date" min="2000-01-01" max={dataAtual()} placeholder=" " required /></CampoFlutuante>
-            <CampoFlutuante label="Comércio"><select name="idComercio" defaultValue=""><option value="">Todos os comércios da rede</option>{commerces.filter(commerce => admin || commerce.status === 'APPROVED').map(commerce => <option key={commerce.id} value={commerce.id}>{commerce.nomeComercio}</option>)}</select></CampoFlutuante>
-            <CampoFlutuante label="Situação"><select name="status" defaultValue=""><option value="">Todas</option>{Object.entries(ROTULOS_STATUS_DIVIDA).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></CampoFlutuante>
-            <button disabled={generatingReport}>{generatingReport ? 'Gerando PDF…' : 'Gerar relatório PDF'}</button>
-          </form>
-        </section>}
-        {owner && subscription && !subscription.podeGerarRelatorio && <section className="painel-conteudo relatorio-bloqueado">
-          <span>🔒</span><div><h2>Relatórios em PDF</h2><p>Disponível no plano profissional. Durante o teste, suas informações permanecem no sistema, mas a exportação fica bloqueada.</p></div>
-          <button onClick={() => openSecao('assinatura')}>Conhecer o plano</button>
-        </section>}
-        <section className="painel-conteudo">
-          <div className="cabecalho-painel-conteudo"><div><h2>Consulta da rede</h2><p>CPF sempre protegido na listagem.</p></div>
-            <form className="busca" onSubmit={event => {
-              event.preventDefault()
-              const busca = query.trim()
-              if (busca.length > 0 && busca.length < 3) {
-                showAlert('Insira pelo menos 3 dígitos do CPF ou 3 caracteres do apelido', 'alerta')
-                return
-              }
-              loadDividas(busca)
-            }}><CampoFlutuante label="insira o nome, CPF, ou apelido"><input value={query} maxLength={120} onChange={event => {
-              setQuery(event.target.value)
-            }} placeholder=" " /></CampoFlutuante><button>Buscar</button></form>
-          </div>
-          <div className="envoltorio-tabela"><table><thead><tr><th>Cliente</th><th>CPF</th><th>Comércio</th><th>Data da dívida</th><th>Data do cadastro</th><th>Valor</th><th>Status</th><th></th></tr></thead>
-            <tbody>{debts.map(debt => <tr key={debt.id}><td><strong className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? debt.cliente.nomeCompleto : 'Cliente protegido'}</strong>{privacyVisible && <small>Apelido: {debt.cliente.apelido}</small>}</td><td className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? debt.cliente.cpfMascarado ?? 'Não informado' : '***.***.***-**'}</td><td>{debt.nomeComercio}</td><td>{new Date(`${debt.dataDivida}T12:00:00`).toLocaleDateString('pt-BR')}</td><td>{new Date(debt.dataCadastro).toLocaleString('pt-BR')}</td><td className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? debt.valorDivida.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ •••••'}</td><td><span className={`indicador ${CLASSES_STATUS_DIVIDA[debt.status]}`}>{ROTULOS_STATUS_DIVIDA[debt.status]}</span></td><td>{debt.status !== 'PAID' && debt.podeDarBaixa && <button className="pequeno" onClick={() => settle(debt.id)}>Dar baixa</button>}</td></tr>)}
-              {!debts.length && <tr><td colSpan={8} className="vazio">Nenhum registro encontrado.</td></tr>}</tbody></table></div>
-        </section>
-        {(owner || staff) && <section className="painel-conteudo painel-formulario"><div className="cabecalho-painel-conteudo"><div><h2>Nova inadimplência</h2><p>Cadastre um cliente e sua dívida em um comércio aprovado.</p></div></div>
-          <form onSubmit={createDivida} className="formulario-compacto formulario-divida">
-            <CampoFlutuante label="Selecione o comércio"><select name="idComercio" defaultValue="" required><option value="" disabled></option>{commerces.filter(commerce => commerce.status === 'APPROVED').map(commerce => <option key={commerce.id} value={commerce.id}>{commerce.nomeComercio}</option>)}</select></CampoFlutuante>
-            <div className="grade-formulario">
-              <CampoFlutuante label="Nome Completo"><input name="nome" placeholder=" " required /></CampoFlutuante>
-              <CampoFlutuante label="Apelido"><input name="apelido" maxLength={120} placeholder=" " required /></CampoFlutuante>
-              <CampoFlutuante label="CPF (opcional): 000.000.000-00"><input name="cpf" inputMode="numeric" maxLength={14} placeholder=" " onInput={event => { event.currentTarget.value = mascararCpf(event.currentTarget.value) }} /></CampoFlutuante>
-              <CampoFlutuante label="Telefone: (11) 99999-9999"><input name="telefone" inputMode="tel" maxLength={15} placeholder=" " onInput={event => { event.currentTarget.value = mascararTelefone(event.currentTarget.value) }} /></CampoFlutuante>
-            </div>
-            <CampoFlutuante label="Endereço do cliente"><input name="residencia" placeholder=" " /></CampoFlutuante>
-            <div className="grade-formulario">
-              <CampoFlutuante label="Valor: R$ 0,00"><input name="valorDivida" type="text" inputMode="numeric" placeholder=" " onInput={event => { event.currentTarget.value = mascararMoeda(event.currentTarget.value) }} required /></CampoFlutuante>
-              <CampoFlutuante label="Data da dívida"><input name="dataDivida" type="date" placeholder=" " min="2000-01-01" max={dataAtual()} onInput={event => limitarAnoData(event.currentTarget)} required /></CampoFlutuante>
-            </div>
-            <CampoFlutuante label="Descrição da dívida"><textarea name="descricao" placeholder=" " /></CampoFlutuante><button>Cadastrar dívida</button>
-          </form>
-        </section>}
-      </section>}
+      {section === 'defaults' && <SecaoInadimplentes
+        dividas={debts}
+        comercios={commerces}
+        assinatura={subscription}
+        busca={query}
+        dadosVisiveis={privacyVisible}
+        administrador={admin}
+        gestor={owner}
+        operador={staff}
+        gerandoRelatorio={generatingReport}
+        alterarBusca={setQuery}
+        buscar={event => {
+          event.preventDefault()
+          const busca = query.trim()
+          if (busca.length > 0 && busca.length < 3) {
+            showAlert('Insira pelo menos 3 dígitos do CPF ou 3 caracteres do apelido', 'alerta')
+            return
+          }
+          loadDividas(busca)
+        }}
+        cadastrar={createDivida}
+        gerarRelatorio={generateReport}
+        darBaixa={settle}
+        conhecerPlano={() => openSecao('assinatura')}
+      />}
 
       {section === 'assinatura' && !staff && <SecaoAssinaturas
         administrador={admin}
@@ -684,8 +597,12 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
         senhaTemporaria={temporaryPassword}
         emailSenhaTemporaria={temporaryPasswordEmail}
         dadosVisiveis={privacyVisible}
+        buscaUsuarios={userRecoveryQuery}
+        usuariosEncontrados={recoveryUsers}
+        buscandoUsuarios={recoveryUsersLoading}
         aprovar={approveReset}
         rejeitar={rejectReset}
+        alterarBuscaUsuarios={setBuscaUsuarioRecuperacao}
         gerarSenhaDireta={generateTemporaryPasswordForUser}
         fecharSenha={() => { setTemporaryPassword(''); setEmailSenhaTemporaria('') }}
       />}
@@ -695,44 +612,12 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
         online={auditOnline}
       />}
 
-      {section === 'perfil' && <section className="visualizacao-secao animar-entrada" key="perfil">
-        <div className="titulo-secao"><div><p className="sobretitulo">Minha conta</p><h2>Meu perfil</h2></div><p>Consulte e mantenha suas informações pessoais atualizadas.</p></div>
-        {!perfil ? <section className="painel-conteudo"><p className="vazio">Carregando suas informações…</p></section>
-          : <div className="estrutura-perfil">
-            <section className="painel-conteudo resumo-perfil">
-              <div className="avatar-perfil-grande">{perfil.nomeCompleto[0]}</div>
-              <h2>{perfil.nomeCompleto}</h2>
-              <span className="perfil-acesso">{ROTULOS_PERFIL[perfil.perfilAcesso]}</span>
-              <dl>
-                <div><dt>CPF</dt><dd className={!privacyVisible ? 'oculto' : ''}>{privacyVisible ? perfil.cpfMascarado : '***.***.***-**'}</dd></div>
-                <div><dt>E-mail</dt><dd>{perfil.email}</dd></div>
-                <div><dt>Telefone</dt><dd>{perfil.telefone ?? 'Não informado'}</dd></div>
-              </dl>
-            </section>
-            <section className="painel-conteudo">
-              <div className="cabecalho-painel-conteudo"><div><h2>Editar informações</h2><p>O CPF é um identificador da conta e não pode ser alterado.</p></div></div>
-              <form className="formulario-compacto" onSubmit={updatePerfil}>
-                <CampoFlutuante label="Nome completo"><input name="nomeCompleto" autoComplete="name" placeholder=" " defaultValue={perfil.nomeCompleto} required /></CampoFlutuante>
-                <CampoFlutuante label="CPF"><input value={perfil.cpfMascarado} placeholder=" " disabled /></CampoFlutuante>
-                <CampoFlutuante label={`Novo telefone (atual: ${perfil.telefone ?? 'não informado'})`}><input name="telefone" inputMode="tel" maxLength={15} placeholder=" " onInput={event => { event.currentTarget.value = mascararTelefone(event.currentTarget.value) }} /></CampoFlutuante>
-                <CampoFlutuante label={`Novo e-mail (atual: ${perfil.email})`}><input name="email" type="email" placeholder=" " /></CampoFlutuante>
-                <CampoFlutuante label="Data de nascimento (opcional)"><input name="dataNascimento" type="date" placeholder=" " min="1900-01-01" max={dataMaximaNascimento()} defaultValue={perfil.dataNascimento ?? ''}
-                  onInvalid={event => event.currentTarget.setCustomValidity('O usuário deve ter pelo menos 18 anos')}
-                  onInput={event => { event.currentTarget.setCustomValidity(''); limitarAnoData(event.currentTarget) }} /></CampoFlutuante>
-                <button>Salvar alterações</button>
-              </form>
-            </section>
-            <section className="painel-conteudo">
-              <div className="cabecalho-painel-conteudo"><div><h2>PIN de recuperação</h2><p>{perfil.pinRecuperacaoConfigurado ? 'Seu PIN está configurado. Você pode substituí-lo abaixo.' : 'Configure o PIN para recuperar sua conta sem depender do administrador.'}</p></div></div>
-              <div className="aviso-pin"><strong>⚠ Dado sensível: guarde este PIN</strong><p>O PIN tem 6 números, não será exibido novamente e será necessário se você esquecer a senha. Não compartilhe com operadores ou terceiros.</p></div>
-              <form className="formulario-compacto" onSubmit={configurarPin}>
-                <CampoFlutuante label="Senha atual"><input name="senhaAtual" type="password" placeholder=" " required /></CampoFlutuante>
-                <div className="grade-formulario"><CampoFlutuante label="Novo PIN (6 números)"><input name="pin" type="password" inputMode="numeric" minLength={6} maxLength={6} pattern="\d{6}" placeholder=" " required onInput={event => { event.currentTarget.value = event.currentTarget.value.replace(/\D/g, '').slice(0, 6) }} /></CampoFlutuante><CampoFlutuante label="Confirmar PIN"><input name="confirmacaoPin" type="password" inputMode="numeric" minLength={6} maxLength={6} pattern="\d{6}" placeholder=" " required onInput={event => { event.currentTarget.value = event.currentTarget.value.replace(/\D/g, '').slice(0, 6) }} /></CampoFlutuante></div>
-                <button>{perfil.pinRecuperacaoConfigurado ? 'Alterar PIN' : 'Configurar PIN'}</button>
-              </form>
-            </section>
-          </div>}
-      </section>}
+      {section === 'perfil' && <SecaoPerfil
+        perfil={perfil}
+        dadosVisiveis={privacyVisible}
+        salvar={updatePerfil}
+        configurarPin={configurarPin}
+      />}
     </main>
   </div>
 }

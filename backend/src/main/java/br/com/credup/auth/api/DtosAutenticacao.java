@@ -96,4 +96,11 @@ public final class DtosAutenticacao {
             String email,
             String senhaTemporaria) {
     }
+
+    public record ResumoUsuarioRecuperacao(
+            UUID id,
+            String nomeCompleto,
+            String email,
+            PerfilAcesso perfilAcesso) {
+    }
 }

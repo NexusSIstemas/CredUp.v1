@@ -100,11 +100,7 @@ export function SecaoAssinaturas({
           <label>Pix Copia e Cola</label>
           <textarea readOnly value={cobrancaPix.pixCopiaECola} />
           <button className="pequeno" onClick={() => copiarPix(cobrancaPix.pixCopiaECola)}>Copiar código Pix</button>
-          <p className={`status-pix ${['CONCLUIDA', 'processed'].includes(cobrancaPix.status) ? 'pago' : ''}`}>
-            {['CONCLUIDA', 'processed'].includes(cobrancaPix.status)
-              ? 'Pagamento confirmado pelo Mercado Pago'
-              : 'Aguardando confirmação do Mercado Pago...'}
-          </p>
+          <p className="status-pix">Aguardando confirmação do Mercado Pago...</p>
           <small>{cobrancaPix.avisoConfirmacao}</small>
         </div>}
       </section>

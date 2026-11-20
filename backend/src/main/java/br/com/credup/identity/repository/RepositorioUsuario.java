@@ -4,6 +4,7 @@ import br.com.credup.identity.domain.Usuario;
 import br.com.credup.shared.domain.PerfilAcesso;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 public interface RepositorioUsuario extends JpaRepository<Usuario, UUID> {
@@ -12,4 +13,6 @@ public interface RepositorioUsuario extends JpaRepository<Usuario, UUID> {
     boolean existsByCpf(String cpf);
     boolean existsByRole(PerfilAcesso perfilAcesso);
     Optional<Usuario> findByCpfAndTelephone(String cpf, String telephone);
+    List<Usuario> findTop10ByFullnameContainingIgnoreCaseAndRoleNotOrderByFullnameAsc(
+            String fullname, PerfilAcesso role);
 }
