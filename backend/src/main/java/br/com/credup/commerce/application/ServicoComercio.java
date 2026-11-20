@@ -5,8 +5,7 @@ import br.com.credup.commerce.domain.*;
 import br.com.credup.commerce.repository.RepositorioComercio;
 import br.com.credup.commerce.repository.RepositorioSolicitacaoComercio;
 import br.com.credup.defaults.repository.RepositorioDivida;
-import br.com.credup.audit.domain.RegistroAuditoria;
-import br.com.credup.audit.repository.RepositorioRegistroAuditoria;
+import br.com.credup.audit.application.ServicoAuditoria;
 import br.com.credup.billing.application.ServicoAssinatura;
 import br.com.credup.identity.domain.*;
 import br.com.credup.shared.domain.*;
@@ -21,18 +20,18 @@ public class ServicoComercio {
     private final RepositorioComercio commerces;
     private final RepositorioSolicitacaoComercio solicitacoes;
     private final RepositorioDivida dividas;
-    private final RepositorioRegistroAuditoria registrosAuditoria;
+    private final ServicoAuditoria auditoria;
     private final ServicoAssinatura assinaturas;
 
     public ServicoComercio(RepositorioComercio commerces,
             RepositorioSolicitacaoComercio solicitacoes,
             RepositorioDivida dividas,
-            RepositorioRegistroAuditoria registrosAuditoria,
+            ServicoAuditoria auditoria,
             ServicoAssinatura assinaturas) {
         this.commerces = commerces;
         this.solicitacoes = solicitacoes;
         this.dividas = dividas;
-        this.registrosAuditoria = registrosAuditoria;
+        this.auditoria = auditoria;
         this.assinaturas = assinaturas;
     }
 
@@ -55,9 +54,9 @@ public class ServicoComercio {
         solicitacao.setEndereco(address);
         solicitacao.setComerciante(merchant);
         solicitacoes.save(solicitacao);
-        registrosAuditoria.save(RegistroAuditoria.of(current, "SOLICITAR_CADASTRO_COMERCIO",
+        auditoria.registrar(current, "SOLICITAR_CADASTRO_COMERCIO",
                 "SolicitacaoComercio", solicitacao.getId(), solicitacao.getNomeComercio(),
-                "Enviou uma solicitação de cadastro de comércio para aprovação"));
+                "Enviou uma solicitação de cadastro de comércio para aprovação");
         return map(solicitacao);
     }
 
@@ -103,15 +102,15 @@ public class ServicoComercio {
             commerces.save(commerce);
             solicitacoes.delete(solicitacao);
             assinaturas.liberarPagamento(commerce.getComerciante());
-            registrosAuditoria.save(RegistroAuditoria.of(current, "APROVAR_CADASTRO_COMERCIO",
+            auditoria.registrar(current, "APROVAR_CADASTRO_COMERCIO",
                     "Comercio", commerce.getId(), commerce.getComercioName(),
-                    "Aprovou a solicitação e criou o comércio na rede"));
+                    "Aprovou a solicitação e criou o comércio na rede");
             return map(commerce);
         }
         solicitacao.setStatus(StatusComercio.REJECTED);
-        registrosAuditoria.save(RegistroAuditoria.of(current, "REJEITAR_CADASTRO_COMERCIO",
+        auditoria.registrar(current, "REJEITAR_CADASTRO_COMERCIO",
                 "SolicitacaoComercio", solicitacao.getId(), solicitacao.getNomeComercio(),
-                "Rejeitou a solicitação de cadastro do comércio"));
+                "Rejeitou a solicitação de cadastro do comércio");
         return map(solicitacao);
     }
 
@@ -129,8 +128,8 @@ public class ServicoComercio {
         address.setCep(request.endereco().cep());
         address.setNumberComercio(request.endereco().numberComercio().trim());
         address.setReferencePoint(request.endereco().pontoReferencia());
-        registrosAuditoria.save(RegistroAuditoria.of(current, "EDITAR_COMERCIO", "Comercio", commerce.getId(),
-                commerce.getComercioName(), "Atualizou o nome ou endereço do comércio"));
+        auditoria.registrar(current, "EDITAR_COMERCIO", "Comercio", commerce.getId(),
+                commerce.getComercioName(), "Atualizou o nome ou endereço do comércio");
         return map(commerce);
     }
 
@@ -144,8 +143,8 @@ public class ServicoComercio {
         if (dividas.existsByCommerceId(id))
             throw new ExcecaoApi(HttpStatus.CONFLICT,
                     "O comércio possui dívidas vinculadas e não pode ser excluído");
-        registrosAuditoria.save(RegistroAuditoria.of(current, "EXCLUIR_COMERCIO", "Comercio", commerce.getId(),
-                commerce.getComercioName(), "Excluiu permanentemente o comércio sem histórico de dívidas"));
+        auditoria.registrar(current, "EXCLUIR_COMERCIO", "Comercio", commerce.getId(),
+                commerce.getComercioName(), "Excluiu permanentemente o comércio sem histórico de dívidas");
         commerces.delete(commerce);
     }
 
