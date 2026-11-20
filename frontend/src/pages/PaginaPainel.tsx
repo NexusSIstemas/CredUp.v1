@@ -185,23 +185,38 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   }, [admin, section, userRecoveryQuery])
 
   useEffect(() => {
-    if (!pixCharge || ['CONCLUIDA', 'processed'].includes(pixCharge.status)) return
+    if (!pixCharge) return
+    const txid = pixCharge.txid
+    let ativo = true
+    let consultando = false
     const interval = window.setInterval(async () => {
+      if (consultando) return
+      consultando = true
       try {
-        const status = await api<StatusCobrancaPix>(`/assinaturas/minha/cobranca-pix/${pixCharge.txid}`)
-        setCobrancaPix(atual => atual ? { ...atual, status: status.status } : atual)
+        const status = await api<StatusCobrancaPix>(`/assinaturas/minha/cobranca-pix/${txid}`)
+        if (!ativo) return
         if (status.pago) {
           window.clearInterval(interval)
+          setCobrancaPix(atual => atual?.txid === txid ? null : atual)
           showAlert('Pagamento confirmado. Sua assinatura foi ativada.', 'sucesso')
           loadSubscription()
           loadSubscriptionHistory()
+        } else {
+          setCobrancaPix(atual => atual?.txid === txid
+            ? { ...atual, status: status.status }
+            : atual)
         }
       } catch {
         // Uma falha temporária não interrompe a tela nem duplica a cobrança.
+      } finally {
+        consultando = false
       }
     }, 5_000)
-    return () => window.clearInterval(interval)
-  }, [pixCharge?.txid, pixCharge?.status])
+    return () => {
+      ativo = false
+      window.clearInterval(interval)
+    }
+  }, [pixCharge?.txid])
 
   function openSecao(next: SecaoPainel) {
     if (owner && subscriptionLoaded && !subscription?.acessoOperacional
