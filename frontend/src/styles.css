@@ -13,13 +13,14 @@ h1,h2,p { margin-top:0; }
 .marca span { display:grid; place-items:center; width:36px; height:36px; border-radius:11px; color:#fff; background:#1d7953; }
 .sobretitulo { color:#1c7952; text-transform:uppercase; letter-spacing:.14em; font-size:.72rem; font-weight:800; }
 .suave { color:#6f7e76; }
-.estrutura-autenticacao { min-height:100vh; display:grid; grid-template-columns:1.05fr .95fr; }
-.apresentacao-autenticacao { padding:3rem 7vw; color:#effbf5; display:flex; flex-direction:column; justify-content:space-between; background:radial-gradient(circle at 20% 80%,#2b8b63 0,transparent 38%),linear-gradient(145deg,#0c3d2a,#155c3f); }
+.estrutura-autenticacao { min-height:100dvh; display:grid; grid-template-columns:minmax(0,1.1fr) minmax(420px,.9fr); }
+.estrutura-autenticacao.modo-acesso-compacto { height:100dvh; overflow:hidden; }
+.apresentacao-autenticacao { min-height:100%; padding:clamp(1.75rem,4vw,3rem) clamp(1.5rem,6vw,7vw); color:#effbf5; display:flex; flex-direction:column; justify-content:space-between; gap:1.25rem; background:radial-gradient(circle at 20% 80%,#2b8b63 0,transparent 38%),linear-gradient(145deg,#0c3d2a,#155c3f); }
 .apresentacao-autenticacao .marca { color:white; }
-.apresentacao-autenticacao h1 { max-width:650px; font-size:clamp(2.7rem,5vw,5.4rem); line-height:1.02; letter-spacing:-.055em; margin-bottom:1.5rem; }
-.apresentacao-autenticacao p:not(.sobretitulo) { max-width:570px; color:#bedaca; font-size:1.1rem; line-height:1.7; }
+.apresentacao-autenticacao h1 { max-width:18ch; font-size:clamp(2.35rem,3.8vw,4.45rem); line-height:1.05; letter-spacing:-.045em; margin:.6rem 0 1rem; }
+.apresentacao-autenticacao p:not(.sobretitulo) { max-width:610px; color:#d1eadb; font-size:clamp(1rem,1.2vw,1.12rem); line-height:1.55; }
 .apresentacao-autenticacao .sobretitulo { color:#82d3aa; }
-.cartao-autenticacao { display:grid; place-items:center; padding:3rem; background:#fff; }
+.cartao-autenticacao { min-height:100%; display:grid; place-items:center; padding:clamp(1.75rem,4vw,3rem); background:#fff; }
 .envoltorio-formulario { width:min(440px,100%); }
 .envoltorio-formulario h2 { font-size:2.1rem; margin-bottom:.55rem; }
 form label { display:grid; gap:.45rem; margin:.9rem 0; color:#3d4a43; font-size:.88rem; font-weight:600; }
@@ -450,45 +451,69 @@ td { padding:.9rem .75rem; border-bottom:1px solid #f0f2f1; font-size:.9rem; }
 }
 
 .divulgacao-planos-autenticacao {
-  margin-top: 28px;
-  max-width: 430px;
+  margin-top: 20px;
+  max-width: 560px;
 }
 
 .carrossel-planos.compacto {
-  grid-template-columns: 34px minmax(0, 340px) 34px;
-  gap: 8px;
+  grid-template-columns: 40px minmax(0, 460px) 40px;
+  gap: 10px;
 }
 
 .carrossel-planos.compacto .cartao-plano {
-  min-height: 245px;
-  padding: 20px;
-  background: rgba(255, 255, 255, .1);
-  color: #fff;
-  border-color: rgba(255, 255, 255, .24);
-  box-shadow: none;
+  min-height: 0;
+  padding: 18px 20px;
+  color: #173c2b;
+  background: #f6fffa;
+  border: 1px solid #9ed5b5;
+  box-shadow: 0 12px 28px rgba(4, 37, 24, .22);
 }
 
 .carrossel-planos.compacto .cartao-plano small,
 .carrossel-planos.compacto .cartao-plano span {
-  color: #b9ead2;
+  color: #246a49;
 }
 
 .carrossel-planos.compacto .cartao-plano ul {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .4rem 1.15rem;
   margin-bottom: 0;
+  color: #365548;
+  font-size: .84rem;
+  line-height: 1.35;
 }
 
 .carrossel-planos.compacto .controle-carrossel {
-  width: 34px;
-  height: 34px;
-  background: rgba(255, 255, 255, .15);
+  width: 40px;
+  height: 40px;
+  color: #fff;
+  background: #176b47;
+  box-shadow: 0 4px 12px rgba(4, 37, 24, .28);
 }
 
 .carrossel-planos.compacto .indicadores-carrossel button {
-  background: rgba(255, 255, 255, .35);
+  background: #98baa8;
 }
 
 .carrossel-planos.compacto .indicadores-carrossel button.ativo {
-  background: #fff;
+  background: #e3fff0;
+}
+
+.posicao-carrossel {
+  align-self: center;
+  color: #e3fff0;
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+
+.indicadores-carrossel:has(.posicao-carrossel) {
+  align-items: center;
+}
+
+.plano-atual:disabled {
+  cursor: default;
 }
 
 @media (max-width: 720px) {
@@ -499,6 +524,18 @@ td { padding:.9rem .75rem; border-bottom:1px solid #f0f2f1; font-size:.9rem; }
   }
 
   .divulgacao-planos-autenticacao {
-    display: none;
+    display: block;
+    width: 100%;
+    max-width: none;
+    margin-top: 1.25rem;
+  }
+
+  .carrossel-planos.compacto .cartao-plano ul {
+    grid-template-columns: 1fr;
+  }
+
+  .estrutura-autenticacao.modo-acesso-compacto {
+    height: auto;
+    overflow: visible;
   }
 }

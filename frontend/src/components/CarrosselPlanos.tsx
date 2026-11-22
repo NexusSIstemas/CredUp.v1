@@ -61,10 +61,11 @@ export function CarrosselPlanos({
     <article
       className={'cartao-plano ' + (atual ? 'atual' : '')}
       key={plano.codigo}
+      aria-labelledby={'plano-' + plano.codigo}
     >
       <div>
         <small>{atual ? 'PLANO ATUAL' : 'PLANO CREDUP'}</small>
-        <h3>{plano.nome}</h3>
+        <h3 id={'plano-' + plano.codigo}>{plano.nome}</h3>
         <strong>
           {formatarMoeda(plano.valorMensal)}
           <span>/mês</span>
@@ -83,6 +84,7 @@ export function CarrosselPlanos({
         {plano.importacaoExportacao && <li>Importação e exportação</li>}
       </ul>
       {escolherPlano && <button
+        className={atual ? 'plano-atual' : pendente ? 'plano-pendente' : ''}
         type="button"
         disabled={atual || pendente}
         onClick={() => escolherPlano(plano.codigo)}
@@ -104,6 +106,9 @@ export function CarrosselPlanos({
       className="indicadores-carrossel"
       aria-label={'Plano ' + (indice + 1) + ' de ' + planos.length}
     >
+      <span className="posicao-carrossel" aria-live="polite">
+        {indice + 1} de {planos.length}
+      </span>
       {planos.map((item, posicao) => <button
         type="button"
         key={item.codigo}
