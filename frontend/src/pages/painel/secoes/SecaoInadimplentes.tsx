@@ -47,9 +47,22 @@ export function SecaoInadimplentes({
       <div className="cabecalho-painel-conteudo"><div><h2>Consulta da rede</h2><p>CPF sempre protegido na listagem.</p></div>
         <form className="busca" onSubmit={buscar}><CampoFlutuante label="insira o nome, CPF, ou apelido"><input value={busca} maxLength={120} onChange={event => alterarBusca(event.target.value)} placeholder=" " /></CampoFlutuante><button>Buscar</button></form>
       </div>
-      <div className="envoltorio-tabela"><table><thead><tr><th>Cliente</th><th>CPF</th><th>Comércio</th><th>Data da dívida</th><th>Data do cadastro</th><th>Valor</th><th>Status</th><th></th></tr></thead>
-        <tbody>{dividas.map(divida => <tr key={divida.id}><td><strong className={!dadosVisiveis ? 'oculto' : ''}>{dadosVisiveis ? divida.cliente.nomeCompleto : 'Cliente protegido'}</strong>{dadosVisiveis && <small>Apelido: {divida.cliente.apelido}</small>}</td><td className={!dadosVisiveis ? 'oculto' : ''}>{dadosVisiveis ? divida.cliente.cpfMascarado ?? 'Não informado' : '***.***.***-**'}</td><td>{divida.nomeComercio}</td><td>{new Date(`${divida.dataDivida}T12:00:00`).toLocaleDateString('pt-BR')}</td><td>{new Date(divida.dataCadastro).toLocaleString('pt-BR')}</td><td className={!dadosVisiveis ? 'oculto' : ''}>{dadosVisiveis ? divida.valorDivida.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ •••••'}</td><td><span className={`indicador ${CLASSES_STATUS_DIVIDA[divida.status]}`}>{ROTULOS_STATUS_DIVIDA[divida.status]}</span></td><td>{divida.status !== 'PAID' && divida.podeDarBaixa && <button className="pequeno" onClick={() => darBaixa(divida.id)}>Dar baixa</button>}</td></tr>)}
-          {!dividas.length && <tr><td colSpan={8} className="vazio">Nenhum registro encontrado.</td></tr>}</tbody></table></div>
+      <p className="ajuda-tabela">Role para baixo para ver mais registros ou para o lado quando necessário.</p>
+      <div className="envoltorio-tabela tabela-inadimplentes" tabIndex={0} role="region" aria-labelledby="titulo-tabela-inadimplentes">
+        <table>
+          <caption id="titulo-tabela-inadimplentes">Registros de inadimplência encontrados na rede</caption>
+          <thead><tr><th scope="col">Cliente</th><th scope="col">CPF</th><th scope="col">Comércio</th><th scope="col">Datas</th><th scope="col">Valor</th><th scope="col">Situação</th></tr></thead>
+          <tbody>{dividas.map(divida => <tr key={divida.id} className={`linha-divida ${CLASSES_STATUS_DIVIDA[divida.status]}`}>
+            <th scope="row"><strong className={!dadosVisiveis ? 'oculto' : ''}>{dadosVisiveis ? divida.cliente.nomeCompleto : 'Cliente protegido'}</strong>{dadosVisiveis && <small>Apelido: {divida.cliente.apelido}</small>}</th>
+            <td className={!dadosVisiveis ? 'oculto' : ''}>{dadosVisiveis ? divida.cliente.cpfMascarado ?? 'Não informado' : '***.***.***-**'}</td>
+            <td>{divida.nomeComercio}</td>
+            <td className="datas-divida"><span><small>Dívida</small>{new Date(`${divida.dataDivida}T12:00:00`).toLocaleDateString('pt-BR')}</span><span><small>Cadastro</small>{new Date(divida.dataCadastro).toLocaleString('pt-BR')}</span></td>
+            <td className={!dadosVisiveis ? 'oculto' : ''}><strong>{dadosVisiveis ? divida.valorDivida.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ •••••'}</strong></td>
+            <td><div className="situacao-divida"><span className={`indicador ${CLASSES_STATUS_DIVIDA[divida.status]}`}>{ROTULOS_STATUS_DIVIDA[divida.status]}</span>{divida.status !== 'PAID' && divida.podeDarBaixa && <button className="pequeno" onClick={() => darBaixa(divida.id)}>Dar baixa</button>}</div></td>
+          </tr>)}
+            {!dividas.length && <tr><td colSpan={6} className="vazio">Nenhum registro encontrado.</td></tr>}</tbody>
+        </table>
+      </div>
     </section>
     {(gestor || operador) && <section className="painel-conteudo painel-formulario"><div className="cabecalho-painel-conteudo"><div><h2>Nova inadimplência</h2><p>Cadastre um cliente e sua dívida em um comércio aprovado.</p></div></div>
       <form onSubmit={cadastrar} className="formulario-compacto formulario-divida">

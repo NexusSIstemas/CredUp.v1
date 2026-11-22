@@ -218,6 +218,25 @@ aside nav a.ativo { color:#fff; background:#ffffff12; }
 table { width:100%; border-collapse:collapse; white-space:nowrap; }
 th { padding:.75rem; color:#829088; text-align:left; font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; border-bottom:1px solid #edf0ee; }
 td { padding:.9rem .75rem; border-bottom:1px solid #f0f2f1; font-size:.9rem; }
+.ajuda-tabela { margin:-.2rem 0 .75rem; color:#839087; font-size:.73rem; }
+.tabela-inadimplentes { max-block-size:min(520px,65vh); border:1px solid #e6ece8; border-radius:12px; background:#fff; container-type:inline-size; }
+.tabela-inadimplentes table { min-inline-size:880px; border-collapse:separate; border-spacing:0; white-space:normal; }
+.tabela-inadimplentes caption { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+.tabela-inadimplentes thead { position:sticky; inset-block-start:0; z-index:3; background:#f7faf8; box-shadow:0 1px 0 #dce6e0; }
+.tabela-inadimplentes th { padding:.72rem .8rem; color:#65766d; background:#f7faf8; font-size:.65rem; }
+.tabela-inadimplentes tbody th { position:sticky; inset-inline-start:0; z-index:2; min-inline-size:180px; padding:.72rem .8rem; color:#1e2d25; background:#fff; text-align:left; text-transform:none; letter-spacing:normal; font-size:.84rem; box-shadow:1px 0 0 #edf2ee; }
+.tabela-inadimplentes tbody td { padding:.72rem .8rem; color:#435149; font-size:.82rem; }
+.tabela-inadimplentes tbody tr:nth-child(even) td { background:#fbfcfb; }
+.tabela-inadimplentes tbody tr:nth-child(even) th { background:#fbfcfb; }
+.tabela-inadimplentes tbody tr:hover td,.tabela-inadimplentes tbody tr:hover th { background:#f0f8f3; }
+.tabela-inadimplentes tbody th small { display:block; margin-top:.18rem; color:#7b8981; font-weight:500; font-size:.69rem; }
+.datas-divida { display:grid; grid-template-columns:max-content max-content; gap:.65rem; }
+.datas-divida span { display:grid; gap:.12rem; }
+.datas-divida small { color:#809087; font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+.situacao-divida { display:flex; align-items:center; gap:.5rem; min-inline-size:175px; }
+.tabela-inadimplentes .linha-divida.pago th { box-shadow:inset 3px 0 #26945e,1px 0 0 #edf2ee; }
+.tabela-inadimplentes .linha-divida.cancelado th,.tabela-inadimplentes .linha-divida.contestado th { box-shadow:inset 3px 0 #cf4d43,1px 0 0 #edf2ee; }
+.tabela-inadimplentes .linha-divida.pendente th,.tabela-inadimplentes .linha-divida.negociando th,.tabela-inadimplentes .linha-divida.parcialmente-pago th { box-shadow:inset 3px 0 #d69b18,1px 0 0 #edf2ee; }
 .indicador { padding:.32rem .55rem; border-radius:99px; color:#7c5b12; background:#fff3d5; font-size:.66rem; font-weight:800; }
 .indicador::before { content:""; display:inline-block; width:6px; height:6px; margin-right:.35rem; border-radius:50%; background:#d69b18; vertical-align:1px; }
 .indicador.pago,.indicador.aprovado { color:#17633f; background:#ddf5e8; }
