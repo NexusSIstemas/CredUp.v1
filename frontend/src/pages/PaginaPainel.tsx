@@ -43,6 +43,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   onLogout: () => void
 }) {
   const [section, setSecao] = useState<SecaoPainel>('overview')
+  const [sidebarCollapsed, setBarraLateralRecolhida] = useState(false)
   const [privacyVisible, setPrivacyVisible] = useState(false)
   const {
     comercios: commerces,
@@ -473,7 +474,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
       .includes(subscriptionQuery.trim().toLocaleLowerCase('pt-BR')))
     .sort((first, second) => Number(Boolean(second.solicitacaoAtivacaoEm)) - Number(Boolean(first.solicitacaoAtivacaoEm)))
 
-  return <div className="estrutura-aplicacao">
+  return <div className={`estrutura-aplicacao ${sidebarCollapsed ? 'barra-lateral-recolhida' : ''}`}>
     <BarraLateralPainel
       sessao={sessao}
       perfil={perfil}
@@ -484,6 +485,8 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
       administrador={admin}
       dono={owner}
       funcionario={staff}
+      barraLateralRecolhida={sidebarCollapsed}
+      alternarBarraLateral={() => setBarraLateralRecolhida(atual => !atual)}
       abrirSecao={openSecao}
       alternarPrivacidade={() => setPrivacyVisible(!privacyVisible)}
       sair={onLogout}

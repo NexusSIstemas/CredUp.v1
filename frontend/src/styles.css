@@ -6,7 +6,7 @@ body { margin:0; min-width:320px; min-height:100vh; }
 button,input,select,textarea { font:inherit; }
 button { cursor:pointer; border:0; border-radius:10px; padding:.78rem 1.1rem; color:white; background:#176b47; font-weight:700; transition:.2s; }
 button:hover { background:#105538; transform:translateY(-1px); }
-button:disabled { opacity:.6; cursor:wait; }
+button:disabled { opacity:.6; cursor:not-allowed; }
 h1,h2,strong,.marca { font-family:'Manrope',sans-serif; }
 h1,h2,p { margin-top:0; }
 .marca { display:flex; align-items:center; gap:.65rem; color:inherit; text-decoration:none; font-size:1.35rem; font-weight:800; }
@@ -127,9 +127,27 @@ input:focus,select:focus,textarea:focus { border-color:#21835b; box-shadow:0 0 0
 .aviso-pin p { margin:.4rem 0 0; line-height:1.45; }
 .rotulo-marcacao { display:flex; grid-template-columns:auto 1fr; align-items:center; }
 .rotulo-marcacao input { width:auto; }
-.estrutura-aplicacao { min-height:100vh; display:grid; grid-template-columns:240px 1fr; }
-aside { position:sticky; top:0; height:100vh; padding:2rem 1.4rem; display:flex; flex-direction:column; color:#dfeee6; background:#103f2d; }
+.estrutura-aplicacao { min-height:100vh; display:grid; grid-template-columns:240px 1fr; transition:grid-template-columns .24s ease; }
+.estrutura-aplicacao.barra-lateral-recolhida { grid-template-columns:76px 1fr; }
+aside { position:sticky; top:0; height:100vh; padding:2rem 1.4rem; display:flex; flex-direction:column; color:#dfeee6; background:#103f2d; transition:padding .24s ease; }
+.cabecalho-barra-lateral { display:flex; align-items:center; justify-content:space-between; gap:.35rem; }
 aside .marca { color:white; padding:0 .5rem; }
+aside .marca b { white-space:nowrap; }
+.alternar-barra-lateral { display:grid; flex:0 0 auto; place-items:center; width:30px; height:30px; min-width:30px; padding:0; border:1px solid #ffffff2d; border-radius:9px; color:#dfeee6; background:#ffffff12; font-size:1.35rem; line-height:1; }
+.alternar-barra-lateral:hover { background:#ffffff24; transform:none; }
+aside.barra-lateral-recolhida { padding-inline:.75rem; align-items:center; }
+aside.barra-lateral-recolhida .cabecalho-barra-lateral { width:100%; justify-content:center; position:relative; }
+aside.barra-lateral-recolhida .marca { padding:0; }
+aside.barra-lateral-recolhida .marca b,
+aside.barra-lateral-recolhida .mensagem-lateral,
+aside.barra-lateral-recolhida .botao-assinatura-lateral>span:last-child,
+aside.barra-lateral-recolhida .botao-perfil>div:last-child,
+aside.barra-lateral-recolhida .fantasma { display:none; }
+aside.barra-lateral-recolhida .alternar-barra-lateral { position:absolute; top:44px; z-index:1; }
+aside.barra-lateral-recolhida .botao-assinatura-lateral,
+aside.barra-lateral-recolhida .botao-perfil { width:auto; padding:.5rem; }
+aside.barra-lateral-recolhida .botao-assinatura-lateral { margin:auto 0 .4rem; }
+aside.barra-lateral-recolhida .botao-perfil { margin-bottom:0; border-top:0; }
 aside nav { display:grid; gap:.35rem; margin:3rem 0 auto; }
 aside nav a { padding:.75rem .9rem; border-radius:9px; color:#abc8b8; text-decoration:none; }
 aside nav a.ativo { color:#fff; background:#ffffff12; }
@@ -334,7 +352,12 @@ td { padding:.9rem .75rem; border-bottom:1px solid #f0f2f1; font-size:.9rem; }
   .apresentacao-autenticacao { min-height:360px; padding:2rem; }
   .apresentacao-autenticacao h1 { font-size:2.7rem; }
   .estrutura-aplicacao { grid-template-columns:1fr; }
-  aside { position:static; height:auto; padding:1rem; flex-direction:row; align-items:center; }
+  .estrutura-aplicacao.barra-lateral-recolhida { grid-template-columns:1fr; }
+  aside,aside.barra-lateral-recolhida { position:static; height:auto; padding:1rem; flex-direction:row; align-items:center; }
+  aside.barra-lateral-recolhida .cabecalho-barra-lateral { width:auto; justify-content:flex-start; }
+  aside.barra-lateral-recolhida .marca { padding:0 .5rem; }
+  aside.barra-lateral-recolhida .marca b { display:block; }
+  .alternar-barra-lateral { display:none; }
   aside nav,.perfil,.mensagem-lateral { display:none; }
   .botao-assinatura-lateral { width:auto; margin:0 0 0 auto; padding:.45rem .55rem; }
   .botao-assinatura-lateral>span:last-child { display:none; }

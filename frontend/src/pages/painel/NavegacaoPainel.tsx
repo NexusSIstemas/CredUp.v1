@@ -15,6 +15,8 @@ export interface PropriedadesNavegacao {
   administrador: boolean
   dono: boolean
   funcionario: boolean
+  barraLateralRecolhida?: boolean
+  alternarBarraLateral?: () => void
   abrirSecao: (secao: SecaoPainel) => void
   alternarPrivacidade: () => void
   sair: () => void
@@ -30,14 +32,26 @@ export function BarraLateralPainel({
   administrador,
   dono,
   funcionario,
+  barraLateralRecolhida = false,
+  alternarBarraLateral,
   abrirSecao,
   alternarPrivacidade,
   sair
 }: PropriedadesNavegacao) {
   const nome = perfil?.nomeCompleto ?? sessao.nome
 
-  return <aside>
-      <a className="marca" href="#"><span>C</span> CredUp</a>
+  return <aside className={barraLateralRecolhida ? 'barra-lateral-recolhida' : ''}>
+      <div className="cabecalho-barra-lateral">
+        <a className="marca" href="#" aria-label="CredUp"><span>C</span><b>CredUp</b></a>
+        {alternarBarraLateral && <button
+          type="button"
+          className="alternar-barra-lateral"
+          onClick={alternarBarraLateral}
+          aria-label={barraLateralRecolhida ? 'Expandir menu lateral' : 'Recolher menu lateral'}
+          aria-expanded={!barraLateralRecolhida}
+          title={barraLateralRecolhida ? 'Expandir menu lateral' : 'Recolher menu lateral'}
+        >{barraLateralRecolhida ? '›' : '‹'}</button>}
+      </div>
       <div className="mensagem-lateral"><small>Ambiente protegido</small><p>Gestão colaborativa para decisões de crédito mais seguras.</p></div>
       {!funcionario && <button className={`botao-assinatura-lateral ${secao === 'assinatura' ? 'ativo' : ''}`} onClick={() => abrirSecao('assinatura')}>
         <span className="icone-assinatura-lateral">A</span>
