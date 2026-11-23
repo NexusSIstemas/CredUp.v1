@@ -50,7 +50,12 @@ export function BarraLateralPainel({
           aria-label={barraLateralRecolhida ? 'Expandir menu lateral' : 'Recolher menu lateral'}
           aria-expanded={!barraLateralRecolhida}
           title={barraLateralRecolhida ? 'Expandir menu lateral' : 'Recolher menu lateral'}
-        >{barraLateralRecolhida ? '›' : '‹'}</button>}
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+            <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
+            <path d="M10 4.5v15" />
+          </svg>
+        </button>}
       </div>
       <div className="mensagem-lateral"><small>Ambiente protegido</small><p>Gestão colaborativa para decisões de crédito mais seguras.</p></div>
       {!funcionario && <button className={`botao-assinatura-lateral ${secao === 'assinatura' ? 'ativo' : ''}`} onClick={() => abrirSecao('assinatura')}>
