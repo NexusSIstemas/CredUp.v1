@@ -233,8 +233,10 @@ aside nav a.ativo { color:#fff; background:#176b47; }
 .painel-conteudo h2 { font-size:1.1rem; margin-bottom:.35rem; }
 .cabecalho-painel-conteudo { display:flex; justify-content:space-between; align-items:center; gap:1rem; margin-bottom:1rem; }
 .cabecalho-painel-conteudo p { margin:0; color:#7c8881; font-size:.85rem; }
-.busca { display:flex; gap:.5rem; width:min(430px,100%); }
+.busca { display:flex; align-items:end; gap:.8rem; width:min(680px,100%); }
 .busca input { margin:0; }
+.busca .campo-flutuante { flex:1 1 260px; }
+.busca .botao-secundario { margin-left:.35rem; }
 .envoltorio-tabela { overflow:auto; }
 table { width:100%; border-collapse:collapse; white-space:nowrap; }
 th { padding:.75rem; color:#829088; text-align:left; font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; border-bottom:1px solid #edf0ee; }
@@ -293,6 +295,13 @@ td { padding:.9rem .75rem; border-bottom:1px solid #f0f2f1; font-size:.9rem; }
 .filtros-relatorio label { margin:0; }
 .filtros-relatorio input,.filtros-relatorio select { margin:0; }
 .filtros-relatorio button { white-space:nowrap; }
+.acoes-formulario { display:flex; flex-wrap:wrap; align-items:center; gap:.65rem; }
+.botao-secundario { color:#40544a; background:#fff; border:1px solid var(--cor-borda); }
+.botao-secundario:hover:not(:disabled) { color:#173c2b; background:#eef3f0; }
+.guias-relatorio { display:flex; gap:.35rem; margin:0 0 1rem; padding:.35rem; border:1px solid var(--cor-borda); border-radius:12px; background:#fff; }
+.guias-relatorio button { color:var(--cor-texto-secundario); background:transparent; }
+.guias-relatorio button.ativo { color:#155d3e; background:var(--cor-sucesso-fundo); }
+.visualizador-relatorio iframe { width:100%; height:min(72vh,920px); border:1px solid var(--cor-borda); border-radius:10px; background:#fff; }
 .estrutura-perfil { display:grid; grid-template-columns:minmax(270px,.7fr) minmax(0,1.3fr); gap:1rem; align-items:start; }
 .resumo-perfil { text-align:center; }
 .avatar-perfil-grande { display:grid; place-items:center; width:82px; height:82px; margin:.5rem auto 1rem; border-radius:24px; color:#fff; background:linear-gradient(145deg,#27865f,#124b35); font-family:'Manrope',sans-serif; font-size:1.55rem; font-weight:800; box-shadow:0 12px 24px #176b4730; }

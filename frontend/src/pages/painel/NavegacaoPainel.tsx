@@ -62,6 +62,10 @@ export function BarraLateralPainel({
         <span className="icone-assinatura-lateral">A</span>
         <span><strong>{administrador ? 'Assinaturas' : 'Minha assinatura'}</strong><small>{administrador ? 'Gerenciar planos' : assinatura ? ROTULOS_STATUS_ASSINATURA[assinatura.status] : 'Ver meu plano'}</small></span>
       </button>}
+      {!funcionario && <button className={`botao-assinatura-lateral ${secao === 'relatorios' ? 'ativo' : ''}`} onClick={() => abrirSecao('relatorios')}>
+        <span className="icone-assinatura-lateral">R</span>
+        <span><strong>Relatórios</strong><small>Gerar e visualizar</small></span>
+      </button>}
       <button className="perfil botao-perfil" onClick={() => abrirSecao('perfil')}><div className="avatar">{nome[0]}</div><div><strong>{nome}</strong><small>{ROTULOS_PERFIL[sessao.perfilAcesso]}</small></div></button>
       <button className="fantasma" onClick={sair}>Sair</button>
     </aside>
@@ -88,6 +92,7 @@ export function CabecalhoPainel({
           <button className={secao === 'overview' ? 'ativo' : ''} onClick={() => abrirSecao('overview')}>Visão geral</button>
           {!funcionario && <button className={secao === 'commerces' ? 'ativo' : ''} onClick={() => abrirSecao('commerces')}>Comércios</button>}
           <button className={secao === 'defaults' ? 'ativo' : ''} onClick={() => abrirSecao('defaults')}>Inadimplentes</button>
+          {!funcionario && <button className={secao === 'relatorios' ? 'ativo' : ''} onClick={() => abrirSecao('relatorios')}>Relatórios</button>}
           {dono && <button className={secao === 'staff' ? 'ativo' : ''} onClick={() => abrirSecao('staff')}>Operadores</button>}
           {administrador && <button className={secao === 'recovery' ? 'ativo' : ''} onClick={() => abrirSecao('recovery')}>
             Recuperação {quantidadeRecuperacoes > 0 && <span>{quantidadeRecuperacoes}</span>}
