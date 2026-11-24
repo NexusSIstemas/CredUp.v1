@@ -26,17 +26,6 @@ public class ServicoPerfil {
     }
 
     @Transactional
-    public RespostaPerfil configurarPin(Usuario current, SolicitacaoPinRecuperacao request) {
-        var user = findCurrent(current);
-        if (!codificador.matches(request.senhaAtual(), user.getSenha()))
-            throw new ExcecaoApi(HttpStatus.UNAUTHORIZED, "Senha atual inválida");
-        user.setPinRecuperacaoHash(codificador.encode(request.pin()));
-        auditLogs.save(RegistroAuditoria.of(user, "UPDATE_RECOVERY_PIN", "Usuario", user.getId(),
-                user.getFullname() + " ", "Configurou um novo PIN de recuperação"));
-        return map(user);
-    }
-
-    @Transactional
     public RespostaPerfil get(Usuario current) {
         var user = findCurrent(current);
         auditLogs.save(RegistroAuditoria.of(user, "VIEW_OWN_PROFILE", "Usuario", user.getId(),
@@ -59,8 +48,12 @@ public class ServicoPerfil {
         if (request.telefone() != null && !request.telefone().isBlank())
             user.setTelephone(request.telefone());
         user.setDateBirth(request.dataNascimento());
+        if (request.pinRecuperacao() != null && !request.pinRecuperacao().isBlank())
+            user.setPinRecuperacaoHash(codificador.encode(request.pinRecuperacao()));
         auditLogs.save(RegistroAuditoria.of(user, "UPDATE_OWN_PROFILE", "Usuario", user.getId(),
-                user.getFullname() + " ", "Atualizou as informações do próprio perfil"));
+                user.getFullname() + " ", request.pinRecuperacao() == null || request.pinRecuperacao().isBlank()
+                        ? "Atualizou as informações do próprio perfil"
+                        : "Atualizou as informações do próprio perfil e o PIN de recuperação"));
         return map(user);
     }
 

@@ -20,17 +20,13 @@ public final class DtosPerfil {
             boolean pinRecuperacaoConfigurado) {
     }
 
-
-    public record SolicitacaoPinRecuperacao(
-            @NotBlank String senhaAtual,
-            @NotBlank @Pattern(regexp = "\\d{6}", message = "O PIN deve conter exatamente 6 números") String pin) {
-    }
-
     public record SolicitacaoAtualizacaoPerfil(
             @NotBlank String nomeCompleto,
             @Pattern(regexp = "^$|\\d{10,11}", message = "Telefone inválido") String telefone,
             @Email(message = "E-mail inválido") String email,
             @Past(message = "Data de nascimento inválida")
-            LocalDate dataNascimento) {
+            LocalDate dataNascimento,
+            @Pattern(regexp = "^$|\\d{6}", message = "O PIN deve conter exatamente 6 números")
+            String pinRecuperacao) {
     }
 }

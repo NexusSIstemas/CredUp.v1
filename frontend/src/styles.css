@@ -322,6 +322,10 @@ td { padding:.9rem .75rem; border-bottom:1px solid #f0f2f1; font-size:.9rem; }
 .formulario-compacto { display:grid; gap:.7rem; margin-top:1rem; }
 .formulario-compacto input,.formulario-compacto select,.formulario-compacto textarea { margin:0; }
 .formulario-compacto textarea { min-height:80px; resize:vertical; }
+.grupo-pin-perfil { display:grid; gap:.7rem; margin:0; padding:1rem; border:1px solid var(--cor-borda); border-radius:12px; }
+.grupo-pin-perfil legend { padding:0 .35rem; color:var(--cor-primaria); font-weight:800; }
+.grupo-pin-perfil>p { margin:0; color:var(--cor-texto-secundario); font-size:.9rem; }
+.grupo-pin-perfil .aviso-pin { margin:0; }
 .cartoes { display:grid; gap:.6rem; margin-top:1rem; }
 .cartao-comercio { display:flex; justify-content:space-between; align-items:center; padding:.85rem; border:1px solid #e7ebe8; border-radius:10px; }
 .cartao-comercio { transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease; }
