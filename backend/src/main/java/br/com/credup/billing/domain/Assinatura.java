@@ -29,7 +29,7 @@ public class Assinatura extends EntidadeBase {
     private LocalDate inicioAssinatura;
 
     @Column(name = "proxima_cobranca")
-    private LocalDate proximaCobranca;
+    private Instant proximaCobranca;
 
     @Column(name = "dia_cobranca")
     private Integer diaCobranca;
@@ -90,11 +90,11 @@ public class Assinatura extends EntidadeBase {
         this.inicioAssinatura = inicioAssinatura;
     }
 
-    public LocalDate getProximaCobranca() {
+    public Instant getProximaCobranca() {
         return proximaCobranca;
     }
 
-    public void setProximaCobranca(LocalDate proximaCobranca) {
+    public void setProximaCobranca(Instant proximaCobranca) {
         this.proximaCobranca = proximaCobranca;
     }
 

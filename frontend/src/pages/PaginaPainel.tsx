@@ -9,7 +9,6 @@ import type {
   Assinatura,
   CobrancaPix,
   StatusCobrancaPix,
-  ConfiguracaoPublica,
   Divida,
   Funcionario,
   PagamentoAssinatura,
@@ -81,7 +80,6 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   const [subscriptionLoaded, setAssinaturaCarregada] = useState(false)
   const [pixCharge, setCobrancaPix] = useState<CobrancaPix | null>(null)
   const [pixLoading, setPixCarregando] = useState(false)
-  const [systemConfig, setConfiguracaoSistema] = useState<ConfiguracaoPublica | null>(null)
   const [plans, setPlanos] = useState<PlanoComercial[]>([])
   const admin = sessao.perfilAcesso === 'ADMIN_REDE'
   const owner = sessao.perfilAcesso === 'MERCHANT_OWNER'
@@ -122,15 +120,11 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   const loadSubscriptionHistory = () => api<PagamentoAssinatura[]>(
     admin ? '/assinaturas/historico' : '/assinaturas/minha/historico'
   ).then(setHistoricoAssinaturas).catch(showError)
-  const loadSystemConfig = () => api<ConfiguracaoPublica>('/configuracoes/publicas')
-    .then(setConfiguracaoSistema)
-    .catch(showError)
   const loadPlans = () => api<PlanoComercial[]>('/assinaturas/planos')
     .then(setPlanos)
     .catch(showError)
 
   useEffect(() => {
-    loadSystemConfig()
     loadPlans()
     loadComercios()
     if (admin) {
@@ -588,7 +582,6 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
         assinaturas={subscriptions}
         assinaturasFiltradas={filteredSubscriptions}
         historico={subscriptionHistory}
-        configuracao={systemConfig}
         planos={plans}
         busca={subscriptionQuery}
         situacao={subscriptionStatus}
