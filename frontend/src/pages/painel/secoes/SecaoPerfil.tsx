@@ -8,10 +8,9 @@ interface PropriedadesSecaoPerfil {
   perfil: Perfil | null
   dadosVisiveis: boolean
   salvar: (event: FormEvent<HTMLFormElement>) => void
-  configurarPin: (event: FormEvent<HTMLFormElement>) => void
 }
 
-export function SecaoPerfil({ perfil, dadosVisiveis, salvar, configurarPin }: PropriedadesSecaoPerfil) {
+export function SecaoPerfil({ perfil, dadosVisiveis, salvar }: PropriedadesSecaoPerfil) {
   return <section className="visualizacao-secao animar-entrada">
     <div className="titulo-secao"><div><p className="sobretitulo">Minha conta</p><h2>Meu perfil</h2></div><p>Consulte e mantenha suas informações pessoais atualizadas.</p></div>
     {!perfil ? <section className="painel-conteudo"><p className="vazio">Carregando suas informações…</p></section>
@@ -36,16 +35,13 @@ export function SecaoPerfil({ perfil, dadosVisiveis, salvar, configurarPin }: Pr
             <CampoFlutuante label="Data de nascimento (opcional)"><input name="dataNascimento" type="date" placeholder=" " min="1900-01-01" max={dataMaximaNascimento()} defaultValue={perfil.dataNascimento ?? ''}
               onInvalid={event => event.currentTarget.setCustomValidity('O usuário deve ter pelo menos 18 anos')}
               onInput={event => { event.currentTarget.setCustomValidity(''); limitarAnoData(event.currentTarget) }} /></CampoFlutuante>
+            <fieldset className="grupo-pin-perfil">
+              <legend>PIN de recuperação</legend>
+              <p>{perfil.pinRecuperacaoConfigurado ? 'Informe um novo PIN somente se quiser substituí-lo.' : 'Configure um PIN para recuperar sua conta sem depender do administrador.'}</p>
+              <div className="aviso-pin"><strong>⚠ Dado sensível: guarde este PIN</strong><p>O PIN tem 6 números, não será exibido novamente e será necessário se você esquecer a senha. Não compartilhe com operadores ou terceiros.</p></div>
+              <CampoFlutuante label="Novo PIN (6 números)"><input name="pinRecuperacao" type="password" inputMode="numeric" autoComplete="new-password" minLength={6} maxLength={6} pattern="\d{6}" placeholder=" " onInput={event => { event.currentTarget.value = event.currentTarget.value.replace(/\D/g, '').slice(0, 6) }} /></CampoFlutuante>
+            </fieldset>
             <button>Salvar alterações</button>
-          </form>
-        </section>
-        <section className="painel-conteudo">
-          <div className="cabecalho-painel-conteudo"><div><h2>PIN de recuperação</h2><p>{perfil.pinRecuperacaoConfigurado ? 'Seu PIN está configurado. Você pode substituí-lo abaixo.' : 'Configure o PIN para recuperar sua conta sem depender do administrador.'}</p></div></div>
-          <div className="aviso-pin"><strong>⚠ Dado sensível: guarde este PIN</strong><p>O PIN tem 6 números, não será exibido novamente e será necessário se você esquecer a senha. Não compartilhe com operadores ou terceiros.</p></div>
-          <form className="formulario-compacto" onSubmit={configurarPin}>
-            <CampoFlutuante label="Senha atual"><input name="senhaAtual" type="password" placeholder=" " required /></CampoFlutuante>
-            <div className="grade-formulario"><CampoFlutuante label="Novo PIN (6 números)"><input name="pin" type="password" inputMode="numeric" minLength={6} maxLength={6} pattern="\d{6}" placeholder=" " required onInput={event => { event.currentTarget.value = event.currentTarget.value.replace(/\D/g, '').slice(0, 6) }} /></CampoFlutuante><CampoFlutuante label="Confirmar PIN"><input name="confirmacaoPin" type="password" inputMode="numeric" minLength={6} maxLength={6} pattern="\d{6}" placeholder=" " required onInput={event => { event.currentTarget.value = event.currentTarget.value.replace(/\D/g, '').slice(0, 6) }} /></CampoFlutuante></div>
-            <button>{perfil.pinRecuperacaoConfigurado ? 'Alterar PIN' : 'Configurar PIN'}</button>
           </form>
         </section>
       </div>}

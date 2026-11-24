@@ -333,7 +333,9 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
 
   async function updatePerfil(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const form = new FormData(event.currentTarget)
+    const formElement = event.currentTarget
+    const form = new FormData(formElement)
+    const novoPin = somenteDigitos(form.get('pinRecuperacao'))
     try {
       const updated = await api<Perfil>('/profile', {
         method: 'PATCH',
@@ -341,12 +343,15 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
           nomeCompleto: form.get('nomeCompleto'),
           telefone: somenteDigitos(form.get('telefone')),
           email: form.get('email'),
-          dataNascimento: form.get('dataNascimento') || null
+          dataNascimento: form.get('dataNascimento') || null,
+          pinRecuperacao: novoPin
         })
       })
       setPerfil(updated)
       onSessaoChange({ ...sessao, nome: updated.nomeCompleto })
-      showAlert('Informações do perfil atualizadas.', 'sucesso')
+      const campoPin = formElement.elements.namedItem('pinRecuperacao')
+      if (campoPin instanceof HTMLInputElement) campoPin.value = ''
+      showAlert(novoPin ? 'Informações e PIN de recuperação atualizados.' : 'Informações do perfil atualizadas.', 'sucesso')
     } catch (erro) { showError(erro) }
   }
 
@@ -360,25 +365,6 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
     } catch (erro) {
       showError(erro)
     }
-  }
-
-  async function configurarPin(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const formElement = event.currentTarget
-    const form = new FormData(formElement)
-    if (form.get('pin') !== form.get('confirmacaoPin')) {
-      showAlert('A confirmação do PIN não coincide.', 'alerta')
-      return
-    }
-    try {
-      const updated = await api<Perfil>('/profile/recovery-pin', {
-        method: 'PUT',
-        body: JSON.stringify({ senhaAtual: form.get('senhaAtual'), pin: form.get('pin') })
-      })
-      setPerfil(updated)
-      formElement.reset()
-      showAlert('PIN de recuperação configurado com segurança.', 'sucesso')
-    } catch (erro) { showError(erro) }
   }
 
   async function createStaff(event: FormEvent<HTMLFormElement>) {
@@ -633,7 +619,6 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
         perfil={perfil}
         dadosVisiveis={privacyVisible}
         salvar={updatePerfil}
-        configurarPin={configurarPin}
       />}
     </main>
   </div>
