@@ -95,7 +95,7 @@ public class ControladorAutenticacao {
             ServicoAutenticacao.ResultadoAutenticacao resultado, HttpStatus status) {
         Duration duracao = Duration.between(java.time.Instant.now(), resultado.refreshToken().expiraEm());
         var cookie = ResponseCookie.from("credup_refresh", resultado.refreshToken().valor())
-                .httpOnly(true).secure(cookieSeguro).sameSite("Strict")
+                .httpOnly(true).secure(cookieSeguro).sameSite("Lax")
                 .path("/api/auth").maxAge(duracao).build();
         return ResponseEntity.status(status).header(HttpHeaders.SET_COOKIE, cookie.toString())
                 .body(resultado.resposta());
@@ -103,6 +103,6 @@ public class ControladorAutenticacao {
 
     private ResponseCookie limparCookie() {
         return ResponseCookie.from("credup_refresh", "").httpOnly(true).secure(cookieSeguro)
-                .sameSite("Strict").path("/api/auth").maxAge(Duration.ZERO).build();
+                .sameSite("Lax").path("/api/auth").maxAge(Duration.ZERO).build();
     }
 }

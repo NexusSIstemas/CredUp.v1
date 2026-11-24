@@ -9,7 +9,6 @@ import type {
   Assinatura,
   CobrancaPix,
   StatusCobrancaPix,
-  ConfiguracaoPublica,
   Divida,
   Funcionario,
   PagamentoAssinatura,
@@ -34,6 +33,8 @@ import { SecaoAssinaturas } from './painel/secoes/SecaoAssinaturas'
 import { SecaoComercios } from './painel/secoes/SecaoComercios'
 import { SecaoPerfil } from './painel/secoes/SecaoPerfil'
 import { SecaoInadimplentes } from './painel/secoes/SecaoInadimplentes'
+import { SecaoNovaDivida } from './painel/secoes/SecaoNovaDivida'
+import { SecaoRelatorios } from './painel/secoes/SecaoRelatorios'
 import { BarraLateralPainel, CabecalhoPainel } from './painel/NavegacaoPainel'
 import { useComercios } from './painel/hooks/useComercios'
 
@@ -43,6 +44,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   onLogout: () => void
 }) {
   const [section, setSecao] = useState<SecaoPainel>('overview')
+  const [sidebarCollapsed, setBarraLateralRecolhida] = useState(false)
   const [privacyVisible, setPrivacyVisible] = useState(false)
   const {
     comercios: commerces,
@@ -69,6 +71,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   const [auditRecords, setRegistrosAuditoria] = useState<RegistroAuditoria[]>([])
   const [auditOnline, setAuditoriaOnline] = useState(false)
   const [generatingReport, setGerandoRelatorio] = useState(false)
+  const [reportUrl, setUrlRelatorio] = useState<string | null>(null)
   const [subscription, setAssinatura] = useState<Assinatura | null>(null)
   const [subscriptions, setAssinaturas] = useState<Assinatura[]>([])
   const [subscriptionHistory, setHistoricoAssinaturas] = useState<PagamentoAssinatura[]>([])
@@ -77,7 +80,6 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   const [subscriptionLoaded, setAssinaturaCarregada] = useState(false)
   const [pixCharge, setCobrancaPix] = useState<CobrancaPix | null>(null)
   const [pixLoading, setPixCarregando] = useState(false)
-  const [systemConfig, setConfiguracaoSistema] = useState<ConfiguracaoPublica | null>(null)
   const [plans, setPlanos] = useState<PlanoComercial[]>([])
   const admin = sessao.perfilAcesso === 'ADMIN_REDE'
   const owner = sessao.perfilAcesso === 'MERCHANT_OWNER'
@@ -118,15 +120,11 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
   const loadSubscriptionHistory = () => api<PagamentoAssinatura[]>(
     admin ? '/assinaturas/historico' : '/assinaturas/minha/historico'
   ).then(setHistoricoAssinaturas).catch(showError)
-  const loadSystemConfig = () => api<ConfiguracaoPublica>('/configuracoes/publicas')
-    .then(setConfiguracaoSistema)
-    .catch(showError)
   const loadPlans = () => api<PlanoComercial[]>('/assinaturas/planos')
     .then(setPlanos)
     .catch(showError)
 
   useEffect(() => {
-    loadSystemConfig()
     loadPlans()
     loadComercios()
     if (admin) {
@@ -220,16 +218,16 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
 
   function openSecao(next: SecaoPainel) {
     if (owner && subscriptionLoaded && !subscription?.acessoOperacional
-      && ['defaults', 'staff'].includes(next)) {
+      && ['defaults', 'nova-divida', 'relatorios', 'staff'].includes(next)) {
       showAlert('Seu acesso operacional está bloqueado. Consulte sua assinatura.', 'alerta')
       setSecao('assinatura')
       return
     }
-    if (owner && next === 'defaults' && !commercesLoaded) {
+    if (owner && ['defaults', 'nova-divida', 'relatorios'].includes(next) && !commercesLoaded) {
       showAlert('Aguarde enquanto verificamos seus comércios.', 'informacao')
       return
     }
-    if (owner && next === 'defaults' && !hasApprovedCommerce) {
+    if (owner && ['defaults', 'nova-divida', 'relatorios'].includes(next) && !hasApprovedCommerce) {
       showAlert(
         commerces.length === 0
           ? 'Cadastre um comércio e aguarde a aprovação do administrador para consultar inadimplentes.'
@@ -292,6 +290,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
       formElement.reset()
       showAlert('Dívida cadastrada.', 'sucesso')
       loadDividas()
+      setSecao('defaults')
     } catch (erro) { showError(erro) }
   }
 
@@ -453,17 +452,23 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
     try {
       const result = await baixarArquivo(`/relatorios/inadimplencias.pdf?${params}`)
       const url = URL.createObjectURL(result.arquivo)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = result.nome
-      link.click()
-      URL.revokeObjectURL(url)
-      showAlert('Relatório PDF gerado com sucesso.', 'sucesso')
+      setUrlRelatorio(anterior => {
+        if (anterior) URL.revokeObjectURL(anterior)
+        return url
+      })
+      showAlert('Relatório gerado. Confira a visualização antes de imprimir.', 'sucesso')
     } catch (erro) {
       showError(erro)
     } finally {
       setGerandoRelatorio(false)
     }
+  }
+
+  function limparRelatorio() {
+    setUrlRelatorio(anterior => {
+      if (anterior) URL.revokeObjectURL(anterior)
+      return null
+    })
   }
 
   const filteredSubscriptions = subscriptions
@@ -473,7 +478,7 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
       .includes(subscriptionQuery.trim().toLocaleLowerCase('pt-BR')))
     .sort((first, second) => Number(Boolean(second.solicitacaoAtivacaoEm)) - Number(Boolean(first.solicitacaoAtivacaoEm)))
 
-  return <div className="estrutura-aplicacao">
+  return <div className={`estrutura-aplicacao ${sidebarCollapsed ? 'barra-lateral-recolhida' : ''}`}>
     <BarraLateralPainel
       sessao={sessao}
       perfil={perfil}
@@ -484,6 +489,8 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
       administrador={admin}
       dono={owner}
       funcionario={staff}
+      barraLateralRecolhida={sidebarCollapsed}
+      alternarBarraLateral={() => setBarraLateralRecolhida(atual => !atual)}
       abrirSecao={openSecao}
       alternarPrivacidade={() => setPrivacyVisible(!privacyVisible)}
       sair={onLogout}
@@ -533,14 +540,10 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
 
       {section === 'defaults' && <SecaoInadimplentes
         dividas={debts}
-        comercios={commerces}
-        assinatura={subscription}
         busca={query}
         dadosVisiveis={privacyVisible}
-        administrador={admin}
         gestor={owner}
         operador={staff}
-        gerandoRelatorio={generatingReport}
         alterarBusca={setQuery}
         buscar={event => {
           event.preventDefault()
@@ -551,9 +554,24 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
           }
           loadDividas(busca)
         }}
-        cadastrar={createDivida}
-        gerarRelatorio={generateReport}
         darBaixa={settle}
+        abrirCadastro={() => openSecao('nova-divida')}
+      />}
+
+      {section === 'nova-divida' && (owner || staff) && <SecaoNovaDivida
+        comercios={commerces}
+        cadastrar={createDivida}
+        cancelar={() => openSecao('defaults')}
+      />}
+
+      {section === 'relatorios' && !staff && <SecaoRelatorios
+        comercios={commerces}
+        assinatura={subscription}
+        administrador={admin}
+        gerar={generateReport}
+        gerando={generatingReport}
+        urlPdf={reportUrl}
+        limpar={limparRelatorio}
         conhecerPlano={() => openSecao('assinatura')}
       />}
 
@@ -564,7 +582,6 @@ export function PaginaPainel({ sessao, onSessaoChange, onLogout }: {
         assinaturas={subscriptions}
         assinaturasFiltradas={filteredSubscriptions}
         historico={subscriptionHistory}
-        configuracao={systemConfig}
         planos={plans}
         busca={subscriptionQuery}
         situacao={subscriptionStatus}

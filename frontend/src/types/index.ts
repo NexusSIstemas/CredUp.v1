@@ -6,7 +6,6 @@ export type StatusAssinatura = 'AGUARDANDO_APROVACAO' | 'AGUARDANDO_PAGAMENTO' |
 export interface ConfiguracaoPublica {
   nomePlano: string
   valorMensal: number
-  diasToleranciaPagamento: number
 }
 
 export interface PlanoComercial {

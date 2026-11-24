@@ -9,6 +9,8 @@ export type SecaoPainel =
   | 'overview'
   | 'commerces'
   | 'defaults'
+  | 'nova-divida'
+  | 'relatorios'
   | 'staff'
   | 'recovery'
   | 'auditoria'

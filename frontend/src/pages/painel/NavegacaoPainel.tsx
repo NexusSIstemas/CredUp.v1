@@ -15,6 +15,8 @@ export interface PropriedadesNavegacao {
   administrador: boolean
   dono: boolean
   funcionario: boolean
+  barraLateralRecolhida?: boolean
+  alternarBarraLateral?: () => void
   abrirSecao: (secao: SecaoPainel) => void
   alternarPrivacidade: () => void
   sair: () => void
@@ -30,18 +32,39 @@ export function BarraLateralPainel({
   administrador,
   dono,
   funcionario,
+  barraLateralRecolhida = false,
+  alternarBarraLateral,
   abrirSecao,
   alternarPrivacidade,
   sair
 }: PropriedadesNavegacao) {
   const nome = perfil?.nomeCompleto ?? sessao.nome
 
-  return <aside>
-      <a className="marca" href="#"><span>C</span> CredUp</a>
+  return <aside className={barraLateralRecolhida ? 'barra-lateral-recolhida' : ''}>
+      <div className="cabecalho-barra-lateral">
+        <a className="marca" href="#" aria-label="CredUp"><span>C</span><b>CredUp</b></a>
+        {alternarBarraLateral && <button
+          type="button"
+          className="alternar-barra-lateral"
+          onClick={alternarBarraLateral}
+          aria-label={barraLateralRecolhida ? 'Expandir menu lateral' : 'Recolher menu lateral'}
+          aria-expanded={!barraLateralRecolhida}
+          title={barraLateralRecolhida ? 'Expandir menu lateral' : 'Recolher menu lateral'}
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+            <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
+            <path d="M10 4.5v15" />
+          </svg>
+        </button>}
+      </div>
       <div className="mensagem-lateral"><small>Ambiente protegido</small><p>Gestão colaborativa para decisões de crédito mais seguras.</p></div>
       {!funcionario && <button className={`botao-assinatura-lateral ${secao === 'assinatura' ? 'ativo' : ''}`} onClick={() => abrirSecao('assinatura')}>
         <span className="icone-assinatura-lateral">A</span>
         <span><strong>{administrador ? 'Assinaturas' : 'Minha assinatura'}</strong><small>{administrador ? 'Gerenciar planos' : assinatura ? ROTULOS_STATUS_ASSINATURA[assinatura.status] : 'Ver meu plano'}</small></span>
+      </button>}
+      {!funcionario && <button className={`botao-assinatura-lateral ${secao === 'relatorios' ? 'ativo' : ''}`} onClick={() => abrirSecao('relatorios')}>
+        <span className="icone-assinatura-lateral">R</span>
+        <span><strong>Relatórios</strong><small>Gerar e visualizar</small></span>
       </button>}
       <button className="perfil botao-perfil" onClick={() => abrirSecao('perfil')}><div className="avatar">{nome[0]}</div><div><strong>{nome}</strong><small>{ROTULOS_PERFIL[sessao.perfilAcesso]}</small></div></button>
       <button className="fantasma" onClick={sair}>Sair</button>
@@ -69,6 +92,7 @@ export function CabecalhoPainel({
           <button className={secao === 'overview' ? 'ativo' : ''} onClick={() => abrirSecao('overview')}>Visão geral</button>
           {!funcionario && <button className={secao === 'commerces' ? 'ativo' : ''} onClick={() => abrirSecao('commerces')}>Comércios</button>}
           <button className={secao === 'defaults' ? 'ativo' : ''} onClick={() => abrirSecao('defaults')}>Inadimplentes</button>
+          {!funcionario && <button className={secao === 'relatorios' ? 'ativo' : ''} onClick={() => abrirSecao('relatorios')}>Relatórios</button>}
           {dono && <button className={secao === 'staff' ? 'ativo' : ''} onClick={() => abrirSecao('staff')}>Operadores</button>}
           {administrador && <button className={secao === 'recovery' ? 'ativo' : ''} onClick={() => abrirSecao('recovery')}>
             Recuperação {quantidadeRecuperacoes > 0 && <span>{quantidadeRecuperacoes}</span>}

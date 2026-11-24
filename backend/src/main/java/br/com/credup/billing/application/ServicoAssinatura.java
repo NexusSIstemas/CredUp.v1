@@ -22,23 +22,22 @@ import java.util.*;
 
 @Service
 public class ServicoAssinatura {
+    private static final ZoneId FUSO_HORARIO_COBRANCA = ZoneId.of("America/Sao_Paulo");
+
     private final RepositorioAssinatura assinaturas;
     private final RepositorioPagamentoAssinatura pagamentos;
     private final RepositorioPlanoComercial planos;
     private final RepositorioRegistroAuditoria auditoria;
-    private final ServicoConfiguracaoSistema configuracoes;
 
     public ServicoAssinatura(
             RepositorioAssinatura assinaturas,
             RepositorioPagamentoAssinatura pagamentos,
             RepositorioPlanoComercial planos,
-            RepositorioRegistroAuditoria auditoria,
-            ServicoConfiguracaoSistema configuracoes) {
+            RepositorioRegistroAuditoria auditoria) {
         this.assinaturas = assinaturas;
         this.pagamentos = pagamentos;
         this.planos = planos;
         this.auditoria = auditoria;
-        this.configuracoes = configuracoes;
     }
 
     @Transactional
@@ -224,7 +223,6 @@ public class ServicoAssinatura {
             return assinatura.getPixPagoEm();
         }
 
-        var hoje = LocalDate.now();
         var confirmadoEm = Instant.now();
         if (assinatura.getProximoPlano() != null) {
             assinatura.setPlano(assinatura.getProximoPlano());
@@ -232,9 +230,9 @@ public class ServicoAssinatura {
         }
         assinatura.setStatus(StatusAssinatura.ATIVA);
         if (assinatura.getInicioAssinatura() == null) {
-            assinatura.setInicioAssinatura(hoje);
+            assinatura.setInicioAssinatura(LocalDate.ofInstant(confirmadoEm, FUSO_HORARIO_COBRANCA));
         }
-        atualizarCicloCobranca(assinatura, hoje);
+        atualizarCicloCobranca(assinatura, confirmadoEm);
         assinatura.setSolicitacaoAtivacaoEm(null);
         assinatura.setCanceladaEm(null);
         assinatura.setPixStatus("CONCLUIDA");
@@ -265,27 +263,30 @@ public class ServicoAssinatura {
         pagamentos.save(pagamento);
     }
 
-    private void atualizarCicloCobranca(Assinatura assinatura, LocalDate pagamentoEm) {
-        int diasToleranciaPagamento = configuracoes.obter()
-                .getDiasToleranciaPagamento();
+    private void atualizarCicloCobranca(Assinatura assinatura, Instant pagamentoEm) {
         var vencimentoAtual = assinatura.getProximaCobranca();
-        boolean renovacaoDentroDaTolerancia = vencimentoAtual != null
-                && !pagamentoEm.isAfter(vencimentoAtual.plusDays(diasToleranciaPagamento));
-
-        if (assinatura.getDiaCobranca() == null || !renovacaoDentroDaTolerancia) {
-            assinatura.setDiaCobranca(pagamentoEm.getDayOfMonth());
+        boolean renovacaoAntesDoVencimento = vencimentoAtual != null
+                && !pagamentoEm.isAfter(vencimentoAtual);
+        var referenciaDoCiclo = renovacaoAntesDoVencimento
+                ? vencimentoAtual
+                : pagamentoEm;
+        if (assinatura.getDiaCobranca() == null || !renovacaoAntesDoVencimento) {
+            assinatura.setDiaCobranca(
+                    pagamentoEm.atZone(FUSO_HORARIO_COBRANCA).getDayOfMonth());
         }
-
-        var mesBase = renovacaoDentroDaTolerancia
-                ? YearMonth.from(vencimentoAtual)
-                : YearMonth.from(pagamentoEm);
-        assinatura.setProximaCobranca(calcularVencimento(
-                mesBase.plusMonths(1),
+        assinatura.setProximaCobranca(calcularProximoVencimento(
+                referenciaDoCiclo,
                 assinatura.getDiaCobranca()));
     }
 
-    static LocalDate calcularVencimento(YearMonth mes, int diaCobranca) {
-        return mes.atDay(Math.min(diaCobranca, mes.lengthOfMonth()));
+    static Instant calcularProximoVencimento(Instant referencia, int diaCobranca) {
+        var horarioDeReferencia = referencia.atZone(FUSO_HORARIO_COBRANCA);
+        var proximoMes = YearMonth.from(horarioDeReferencia).plusMonths(1);
+        return proximoMes
+                .atDay(Math.min(diaCobranca, proximoMes.lengthOfMonth()))
+                .atTime(horarioDeReferencia.toLocalTime())
+                .atZone(FUSO_HORARIO_COBRANCA)
+                .toInstant();
     }
 
     @Transactional
@@ -351,7 +352,7 @@ public class ServicoAssinatura {
         }
     }
 
-    @Scheduled(cron = "0 0 * * * *", zone = "America/Sao_Paulo")
+    @Scheduled(cron = "0 * * * * *", zone = "America/Sao_Paulo")
     @Transactional
     public void atualizarAssinaturasVencidas() {
         assinaturas.findAll().forEach(this::atualizarStatus);
@@ -386,31 +387,21 @@ public class ServicoAssinatura {
     }
 
     private void atualizarStatus(Assinatura assinatura) {
-        int diasToleranciaPagamento = configuracoes.obter()
-                .getDiasToleranciaPagamento();
-        var hoje = LocalDate.now();
         if (assinatura.getStatus() == StatusAssinatura.ATIVA
                 && assinatura.getProximaCobranca() != null
-                && hoje.isAfter(assinatura.getProximaCobranca())) {
-            assinatura.setStatus(StatusAssinatura.AGUARDANDO_PAGAMENTO);
-        }
-        if (assinatura.getStatus() == StatusAssinatura.AGUARDANDO_PAGAMENTO
-                && assinatura.getProximaCobranca() != null
-                && hoje.isAfter(assinatura.getProximaCobranca()
-                        .plusDays(diasToleranciaPagamento))) {
+                && !acessoEstaVigente(assinatura.getProximaCobranca(), Instant.now())) {
             assinatura.setStatus(StatusAssinatura.ATRASADA);
         }
     }
 
     private boolean temAcessoOperacional(Assinatura assinatura) {
-        if (assinatura.getStatus() == StatusAssinatura.ATIVA) {
-            return true;
-        }
-        return assinatura.getStatus() == StatusAssinatura.AGUARDANDO_PAGAMENTO
+        return assinatura.getStatus() == StatusAssinatura.ATIVA
                 && assinatura.getProximaCobranca() != null
-                && !LocalDate.now().isAfter(assinatura.getProximaCobranca()
-                        .plusDays(configuracoes.obter()
-                                .getDiasToleranciaPagamento()));
+                && acessoEstaVigente(assinatura.getProximaCobranca(), Instant.now());
+    }
+
+    static boolean acessoEstaVigente(Instant vencimento, Instant agora) {
+        return !agora.isAfter(vencimento);
     }
 
     private RespostaAssinatura mapear(Assinatura assinatura) {

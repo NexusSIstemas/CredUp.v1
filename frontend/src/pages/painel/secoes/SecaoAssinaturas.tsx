@@ -1,6 +1,6 @@
 import { CampoFlutuante } from '../../../components/CampoFlutuante'
 import { CarrosselPlanos } from '../../../components/CarrosselPlanos'
-import type { Assinatura, CobrancaPix, ConfiguracaoPublica, PagamentoAssinatura, PlanoComercial } from '../../../types'
+import type { Assinatura, CobrancaPix, PagamentoAssinatura, PlanoComercial } from '../../../types'
 import { ROTULOS_STATUS_ASSINATURA } from '../constantes'
 
 interface PropriedadesSecaoAssinaturas {
@@ -10,7 +10,6 @@ interface PropriedadesSecaoAssinaturas {
   assinaturas: Assinatura[]
   assinaturasFiltradas: Assinatura[]
   historico: PagamentoAssinatura[]
-  configuracao: ConfiguracaoPublica | null
   planos: PlanoComercial[]
   busca: string
   situacao: string
@@ -43,7 +42,6 @@ export function SecaoAssinaturas({
   assinaturas,
   assinaturasFiltradas,
   historico,
-  configuracao,
   planos,
   busca,
   situacao,
@@ -81,12 +79,10 @@ export function SecaoAssinaturas({
           ? 'O pagamento ficará disponível quando o administrador aprovar seu primeiro comércio.'
           : assinatura.status === 'ATIVA'
             ? 'Seu acesso completo está ativo, incluindo relatórios em PDF.'
-            : assinatura.acessoOperacional
-              ? `O pagamento está no período de tolerância de ${configuracao?.diasToleranciaPagamento ?? '—'} dias. Seu acesso permanece liberado enquanto aguardamos a confirmação.`
-              : 'As funções operacionais estão bloqueadas até a confirmação do pagamento.'}</p>
+            : 'As funções operacionais estão bloqueadas até a confirmação do pagamento.'}</p>
         <dl className="detalhes-assinatura">
           <div><dt>Mensalidade</dt><dd>{formatarMoeda(assinatura.plano.valorMensal)}</dd></div>
-          <div><dt>Próximo vencimento</dt><dd>{formatarData(assinatura.proximaCobranca, 'Após o primeiro pagamento')}</dd></div>
+          <div><dt>Acesso válido até</dt><dd>{assinatura.proximaCobranca ? formatarDataHora(assinatura.proximaCobranca) : 'Após o primeiro pagamento'}</dd></div>
           <div><dt>Acesso ao sistema</dt><dd>{assinatura.acessoOperacional ? 'Liberado' : 'Bloqueado'}</dd></div>
         </dl>
         {assinatura.proximoPlano && <p className="aviso-plano-pendente"><strong>Alteração pendente:</strong> plano {assinatura.proximoPlano.nome}. O novo plano será liberado após a confirmação do pagamento de {formatarMoeda(assinatura.proximoPlano.valorMensal)}.</p>}
@@ -128,7 +124,7 @@ export function SecaoAssinaturas({
             <tbody>{historico.map(pagamento => <tr key={pagamento.id}>
               <td>{formatarDataHora(pagamento.pagoEm)}</td>
               <td>{formatarMoeda(pagamento.valor)}</td>
-              <td>{formatarData(pagamento.acessoValidoAte)}</td>
+              <td>{formatarDataHora(pagamento.acessoValidoAte)}</td>
             </tr>)}{!historico.length && <tr><td colSpan={3} className="vazio">Nenhum pagamento confirmado até o momento.</td></tr>}</tbody>
           </table>
         </div>
@@ -159,7 +155,7 @@ export function SecaoAssinaturas({
               <td>{formatarData(item.inicioAssinatura)}</td>
               <td>{formatarDataHora(item.ultimoPagamentoEm)}</td>
               <td>{formatarMoeda(item.valorUltimoPagamento)}</td>
-              <td>{formatarData(item.proximaCobranca)}</td>
+              <td>{formatarDataHora(item.proximaCobranca)}</td>
               <td>{item.acessoOperacional ? 'Liberado' : 'Bloqueado'}</td>
             </tr>)}{!assinaturasFiltradas.length && <tr><td colSpan={7} className="vazio">Nenhuma assinatura encontrada com esses filtros.</td></tr>}</tbody>
           </table>
@@ -176,7 +172,7 @@ export function SecaoAssinaturas({
               <td><strong>{pagamento.nomeGestor}</strong><small>{pagamento.email}</small></td>
               <td>{formatarDataHora(pagamento.pagoEm)}</td>
               <td>{formatarMoeda(pagamento.valor)}</td>
-              <td>{formatarData(pagamento.acessoValidoAte)}</td>
+              <td>{formatarDataHora(pagamento.acessoValidoAte)}</td>
             </tr>)}{!historico.length && <tr><td colSpan={4} className="vazio">Nenhum pagamento confirmado até o momento.</td></tr>}</tbody>
           </table>
         </div>

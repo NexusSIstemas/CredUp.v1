@@ -2,7 +2,6 @@ package br.com.credup.billing.application;
 
 import br.com.credup.audit.repository.RepositorioRegistroAuditoria;
 import br.com.credup.billing.domain.Assinatura;
-import br.com.credup.billing.domain.ConfiguracaoSistema;
 import br.com.credup.billing.domain.PlanoComercial;
 import br.com.credup.billing.domain.StatusAssinatura;
 import br.com.credup.billing.repository.RepositorioAssinatura;
@@ -10,8 +9,7 @@ import br.com.credup.identity.domain.Comerciante;
 import br.com.credup.shared.domain.PerfilAcesso;
 import org.junit.jupiter.api.Test;
 
-import java.time.LocalDate;
-import java.time.YearMonth;
+import java.time.Instant;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -31,39 +29,44 @@ class ServicoAssinaturaTest {
                 "ORD12345678901234567890");
 
         assertEquals(StatusAssinatura.ATIVA, cenario.assinatura().getStatus());
-        assertEquals(
-                LocalDate.now().plusMonths(1),
-                cenario.assinatura().getProximaCobranca());
+        assertTrue(cenario.assinatura().getProximaCobranca().isAfter(Instant.now()));
     }
 
     @Test
-    void preservaDiaAncoraDepoisDeFevereiro() {
+    void preservaDiaEHorarioDeCobrancaDepoisDeFevereiro() {
         assertEquals(
-                LocalDate.of(2027, 2, 28),
-                ServicoAssinatura.calcularVencimento(YearMonth.of(2027, 2), 31));
+                Instant.parse("2027-02-28T17:42:10Z"),
+                ServicoAssinatura.calcularProximoVencimento(
+                        Instant.parse("2027-01-31T17:42:10Z"),
+                        31));
         assertEquals(
-                LocalDate.of(2027, 3, 31),
-                ServicoAssinatura.calcularVencimento(YearMonth.of(2027, 3), 31));
+                Instant.parse("2027-03-31T17:42:10Z"),
+                ServicoAssinatura.calcularProximoVencimento(
+                        Instant.parse("2027-02-28T17:42:10Z"),
+                        31));
     }
 
     @Test
-    void mantemAcessoDuranteTresDiasDeTolerancia() {
+    void mantemAcessoAteOInstanteExatoDoVencimento() {
+        var vencimento = Instant.parse("2026-12-20T14:32:10Z");
+
+        assertTrue(ServicoAssinatura.acessoEstaVigente(vencimento, vencimento));
+    }
+
+    @Test
+    void bloqueiaAcessoUmSegundoAposOVencimento() {
+        var vencimento = Instant.parse("2026-12-20T14:32:10Z");
+
+        assertFalse(ServicoAssinatura.acessoEstaVigente(
+                vencimento,
+                vencimento.plusSeconds(1)));
+    }
+
+    @Test
+    void bloqueiaAcessoAssimQueOVencimentoPassa() {
         var cenario = criarCenario(
                 StatusAssinatura.ATIVA,
-                LocalDate.now().minusDays(1));
-
-        var resposta = cenario.servico().minha(cenario.comerciante());
-
-        assertEquals(StatusAssinatura.AGUARDANDO_PAGAMENTO, resposta.status());
-        assertTrue(resposta.acessoOperacional());
-        assertTrue(resposta.podeGerarRelatorio());
-    }
-
-    @Test
-    void bloqueiaAcessoNoQuartoDiaSemPagamentoConfirmado() {
-        var cenario = criarCenario(
-                StatusAssinatura.ATIVA,
-                LocalDate.now().minusDays(4));
+                Instant.now().minusSeconds(1));
 
         var resposta = cenario.servico().minha(cenario.comerciante());
 
@@ -74,7 +77,7 @@ class ServicoAssinaturaTest {
 
     private Cenario criarCenario(
             StatusAssinatura status,
-            LocalDate vencimento) {
+            Instant vencimento) {
         var repositorio = mock(RepositorioAssinatura.class);
         var auditoria = mock(RepositorioRegistroAuditoria.class);
         var comerciante = new Comerciante();
@@ -93,18 +96,12 @@ class ServicoAssinaturaTest {
 
         when(repositorio.findByComercianteId(comerciante.getId()))
                 .thenReturn(Optional.of(assinatura));
-        var configuracao = mock(ConfiguracaoSistema.class);
-        when(configuracao.getDiasToleranciaPagamento()).thenReturn(3);
-        var configuracoes = mock(ServicoConfiguracaoSistema.class);
-        when(configuracoes.obter()).thenReturn(configuracao);
-
         return new Cenario(
                 new ServicoAssinatura(
                         repositorio,
                         mock(br.com.credup.billing.repository.RepositorioPagamentoAssinatura.class),
                         mock(br.com.credup.billing.repository.RepositorioPlanoComercial.class),
-                        auditoria,
-                        configuracoes),
+                        auditoria),
                 comerciante,
                 assinatura);
     }

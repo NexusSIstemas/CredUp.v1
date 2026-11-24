@@ -22,7 +22,7 @@ public class PagamentoAssinatura extends EntidadeBase {
     private Instant pagoEm;
 
     @Column(name = "acesso_valido_ate", nullable = false)
-    private LocalDate acessoValidoAte;
+    private Instant acessoValidoAte;
 
     public Assinatura getAssinatura() {
         return assinatura;
@@ -56,11 +56,11 @@ public class PagamentoAssinatura extends EntidadeBase {
         this.pagoEm = pagoEm;
     }
 
-    public LocalDate getAcessoValidoAte() {
+    public Instant getAcessoValidoAte() {
         return acessoValidoAte;
     }
 
-    public void setAcessoValidoAte(LocalDate acessoValidoAte) {
+    public void setAcessoValidoAte(Instant acessoValidoAte) {
         this.acessoValidoAte = acessoValidoAte;
     }
 }

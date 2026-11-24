@@ -20,13 +20,11 @@ public class ControladorConfiguracaoSistema {
         var configuracao = servico.obter();
         return new RespostaConfiguracaoPublica(
                 configuracao.getNomePlano(),
-                configuracao.getValorMensal(),
-                configuracao.getDiasToleranciaPagamento());
+                configuracao.getValorMensal());
     }
 
     public record RespostaConfiguracaoPublica(
             String nomePlano,
-            BigDecimal valorMensal,
-            int diasToleranciaPagamento) {
+            BigDecimal valorMensal) {
     }
 }

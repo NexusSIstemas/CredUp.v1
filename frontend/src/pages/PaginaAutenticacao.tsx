@@ -87,7 +87,9 @@ export function PaginaAutenticacao({ onAuth }: { onAuth: (session: Sessao) => vo
     }
   }
 
-  return <main className="estrutura-autenticacao">
+  const formularioAmplo = register || forgotPassword
+
+  return <main className={`estrutura-autenticacao ${formularioAmplo ? 'modo-formulario-amplo' : 'modo-acesso-compacto'}`}>
     <section className="apresentacao-autenticacao">
       <a className="marca" href="#"><span>C</span> CredUp</a>
       <div>

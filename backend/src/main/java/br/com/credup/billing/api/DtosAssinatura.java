@@ -18,7 +18,7 @@ public final class DtosAssinatura {
             RespostaPlano proximoPlano,
             StatusAssinatura status,
             LocalDate inicioAssinatura,
-            LocalDate proximaCobranca,
+            Instant proximaCobranca,
             Instant solicitacaoAtivacaoEm,
             BigDecimal valorUltimoPagamento,
             Instant ultimoPagamentoEm,
@@ -34,7 +34,7 @@ public final class DtosAssinatura {
             String email,
             BigDecimal valor,
             Instant pagoEm,
-            LocalDate acessoValidoAte) {
+            Instant acessoValidoAte) {
     }
 
     public record RespostaPlano(
